@@ -1,0 +1,4214 @@
+﻿diff --git a/src/App.jsx b/src/App.jsx
+index 19de346..00acc33 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -1,47 +1,119 @@
+-import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
++import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
+ import { AuthProvider, useAuth } from './context/AuthContext';
+ import {
+     LayoutDashboard, Users, Calendar, ClipboardList, Wallet, BarChart3,
+-    Settings, LogOut, Package, FileText, Link2, Store, Building2
++    Settings, LogOut, Stethoscope, UserCog, Shield, Pill, Package, FileText,
++    Syringe, Apple, ScanLine, FolderOpen
+ } from 'lucide-react';
+-import { useState } from 'react';
++import { useEffect, useState } from 'react';
+ import { ToastContainer } from './components/Toast';
+ 
+-// Clinic Pages
++// Pages ΓÇö Clinic
+ import Dashboard from './pages/Dashboard';
+ import Patients from './pages/Patients';
+-import Appointments from './pages/Appointments';
++import Queue from './pages/Appointments';
+ import Consultation from './pages/Consultation';
+ import Billing from './pages/Billing';
+ import Reports from './pages/Reports';
+ import SettingsPage from './pages/Settings';
++import IndoorDispensary from './pages/IndoorDispensary';
++import OutdoorDispensary from './pages/OutdoorDispensary';
++import DietTemplates from './pages/DietTemplates';
++import DocumentScanner from './pages/DocumentScanner';
+ 
+-// Medical Store Pages
++// Pages ΓÇö Pharmacy
+ import PharmacyDashboard from './pages/PharmacyDashboard';
+ import Inventory from './pages/Inventory';
+ import Prescriptions from './pages/Prescriptions';
+ 
+-// Shared Pages
+-import LinkedEntities from './pages/LinkedEntities';
++/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
++   DOCTOR SIDEBAR
++   ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */
++const DoctorSidebar = () => {
++    const { logout, user } = useAuth();
++    const location = useLocation();
++
++    const clinicalItems = [
++        { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
++        { path: '/queue', icon: Calendar, label: 'Patient Queue' },
++        { path: '/patients', icon: Users, label: 'Patient Records' },
++        { path: '/consultations', icon: Stethoscope, label: 'Consultation' },
++    ];
++
++    const dispensaryItems = [
++        { path: '/indoor-dispensary', icon: Syringe, label: 'Indoor Dispensary' },
++        { path: '/outdoor-dispensary', icon: Pill, label: 'Outdoor Dispensary' },
++        { path: '/diet-templates', icon: Apple, label: 'Diet & Homecare' },
++        { path: '/documents', icon: ScanLine, label: 'Document Scanner' },
++    ];
++
++    const mgmtItems = [
++        { path: '/reports', icon: BarChart3, label: 'Reports' },
++        { path: '/settings', icon: Settings, label: 'Settings' },
++    ];
++
++    const isActive = (path) => {
++        if (path === '/') return location.pathname === '/';
++        return location.pathname.startsWith(path);
++    };
++
++    return (
++        <aside className="sidebar">
++            <div className="logo-container">
++                <div className="logo-icon">SC</div>
++                <span className="logo-text">SmartClinic</span>
++            </div>
++            <div className="role-badge doctor-badge">
++                <Stethoscope size={13} />
++                <span>{user?.name || 'Doctor'}</span>
++            </div>
++            <nav>
++                <span className="nav-section-title">Clinical</span>
++                {clinicalItems.map((item) => (
++                    <Link key={item.path} to={item.path} className={`nav-link ${isActive(item.path) ? 'active' : ''}`}>
++                        <item.icon size={19} /><span>{item.label}</span>
++                    </Link>
++                ))}
++                <span className="nav-section-title">Dispensary</span>
++                {dispensaryItems.map((item) => (
++                    <Link key={item.path} to={item.path} className={`nav-link ${isActive(item.path) ? 'active' : ''}`}>
++                        <item.icon size={19} /><span>{item.label}</span>
++                    </Link>
++                ))}
++                <span className="nav-section-title">Management</span>
++                {mgmtItems.map((item) => (
++                    <Link key={item.path} to={item.path} className={`nav-link ${isActive(item.path) ? 'active' : ''}`}>
++                        <item.icon size={19} /><span>{item.label}</span>
++                    </Link>
++                ))}
++            </nav>
++            <button onClick={logout} className="logout-btn"><LogOut size={19} /><span>Logout</span></button>
++        </aside>
++    );
++};
+ 
+ /* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+-   CLINIC SIDEBAR
++   ASSISTANT SIDEBAR
+    ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */
+-const ClinicSidebar = () => {
+-    const { logout } = useAuth();
++const AssistantSidebar = () => {
++    const { logout, user } = useAuth();
+     const location = useLocation();
+ 
+-    const mainNav = [
++    const receptionItems = [
+         { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
+-        { path: '/appointments', icon: Calendar, label: 'Appointments' },
++        { path: '/queue', icon: Calendar, label: 'Queue Manager' },
+         { path: '/patients', icon: Users, label: 'Patients' },
+-        { path: '/consultations', icon: ClipboardList, label: 'Consultation' },
++        { path: '/billing', icon: Wallet, label: 'Billing' },
+     ];
+ 
+-    const secondaryNav = [
+-        { path: '/billing', icon: Wallet, label: 'Billing' },
++    const dispensaryItems = [
++        { path: '/indoor-dispensary', icon: Syringe, label: 'Indoor Dispensary' },
++        { path: '/outdoor-dispensary', icon: Pill, label: 'Outdoor Dispensary' },
++        { path: '/documents', icon: ScanLine, label: 'Document Scanner' },
++    ];
++
++    const mgmtItems = [
+         { path: '/reports', icon: BarChart3, label: 'Reports' },
+-        { path: '/linked-stores', icon: Store, label: 'Linked Stores' },
+         { path: '/settings', icon: Settings, label: 'Settings' },
+     ];
+ 
+@@ -56,15 +128,25 @@ const ClinicSidebar = () => {
+                 <div className="logo-icon">SC</div>
+                 <span className="logo-text">SmartClinic</span>
+             </div>
++            <div className="role-badge assistant-badge">
++                <UserCog size={13} />
++                <span>{user?.name || 'Receptionist'}</span>
++            </div>
+             <nav>
+-                <span className="nav-section-title">Main Menu</span>
+-                {mainNav.map((item) => (
++                <span className="nav-section-title">Reception</span>
++                {receptionItems.map((item) => (
++                    <Link key={item.path} to={item.path} className={`nav-link ${isActive(item.path) ? 'active' : ''}`}>
++                        <item.icon size={19} /><span>{item.label}</span>
++                    </Link>
++                ))}
++                <span className="nav-section-title">Dispensary</span>
++                {dispensaryItems.map((item) => (
+                     <Link key={item.path} to={item.path} className={`nav-link ${isActive(item.path) ? 'active' : ''}`}>
+                         <item.icon size={19} /><span>{item.label}</span>
+                     </Link>
+                 ))}
+                 <span className="nav-section-title">Management</span>
+-                {secondaryNav.map((item) => (
++                {mgmtItems.map((item) => (
+                     <Link key={item.path} to={item.path} className={`nav-link ${isActive(item.path) ? 'active' : ''}`}>
+                         <item.icon size={19} /><span>{item.label}</span>
+                     </Link>
+@@ -76,21 +158,16 @@ const ClinicSidebar = () => {
+ };
+ 
+ /* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+-   STORE SIDEBAR
++   PHARMACIST SIDEBAR
+    ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */
+-const StoreSidebar = () => {
+-    const { logout } = useAuth();
++const PharmacistSidebar = () => {
++    const { logout, user } = useAuth();
+     const location = useLocation();
+ 
+-    const mainNav = [
++    const navItems = [
+         { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
+-        { path: '/inventory', icon: Package, label: 'Inventory' },
+         { path: '/prescriptions', icon: FileText, label: 'Prescriptions' },
+-    ];
+-
+-    const secondaryNav = [
+-        { path: '/linked-clinics', icon: Building2, label: 'Linked Clinics' },
+-        { path: '/billing', icon: Wallet, label: 'Billing' },
++        { path: '/inventory', icon: Package, label: 'Inventory' },
+         { path: '/reports', icon: BarChart3, label: 'Reports' },
+         { path: '/settings', icon: Settings, label: 'Settings' },
+     ];
+@@ -103,18 +180,22 @@ const StoreSidebar = () => {
+     return (
+         <aside className="sidebar sidebar-store">
+             <div className="logo-container">
+-                <div className="logo-icon store-logo">MP</div>
+-                <span className="logo-text">MedPlus</span>
++                <div className="logo-icon store-logo"><Pill size={20} /></div>
++                <span className="logo-text" style={{ background: 'linear-gradient(135deg, #10b981, #059669)', backgroundClip: 'text', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Pharmacy</span>
++            </div>
++            <div className="role-badge pharmacist-badge">
++                <Pill size={13} />
++                <span>{user?.name || 'Pharmacist'}</span>
+             </div>
+             <nav>
+                 <span className="nav-section-title">Pharmacy</span>
+-                {mainNav.map((item) => (
++                {navItems.slice(0, 3).map((item) => (
+                     <Link key={item.path} to={item.path} className={`nav-link ${isActive(item.path) ? 'active' : ''}`}>
+                         <item.icon size={19} /><span>{item.label}</span>
+                     </Link>
+                 ))}
+                 <span className="nav-section-title">Management</span>
+-                {secondaryNav.map((item) => (
++                {navItems.slice(3).map((item) => (
+                     <Link key={item.path} to={item.path} className={`nav-link ${isActive(item.path) ? 'active' : ''}`}>
+                         <item.icon size={19} /><span>{item.label}</span>
+                     </Link>
+@@ -130,25 +211,33 @@ const StoreSidebar = () => {
+    ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */
+ const BottomNav = () => {
+     const location = useLocation();
+-    const { isClinic } = useAuth();
++    const { isDoctor, isPharmacist } = useAuth();
+ 
+-    const clinicNav = [
++    const doctorNav = [
+         { path: '/', icon: LayoutDashboard, label: 'Home' },
++        { path: '/queue', icon: Calendar, label: 'Queue' },
++        { path: '/consultations', icon: Stethoscope, label: 'Consult' },
++        { path: '/patients', icon: Users, label: 'Records' },
++        { path: '/settings', icon: Settings, label: 'More' },
++    ];
++
++    const assistantNav = [
++        { path: '/', icon: LayoutDashboard, label: 'Home' },
++        { path: '/queue', icon: Calendar, label: 'Queue' },
+         { path: '/patients', icon: Users, label: 'Patients' },
+-        { path: '/appointments', icon: Calendar, label: 'Queue' },
+-        { path: '/consultations', icon: ClipboardList, label: 'Consult' },
++        { path: '/billing', icon: Wallet, label: 'Billing' },
+         { path: '/settings', icon: Settings, label: 'More' },
+     ];
+ 
+-    const storeNav = [
++    const pharmacistNav = [
+         { path: '/', icon: LayoutDashboard, label: 'Home' },
+-        { path: '/inventory', icon: Package, label: 'Inventory' },
+         { path: '/prescriptions', icon: FileText, label: 'Rx' },
+-        { path: '/linked-clinics', icon: Building2, label: 'Clinics' },
++        { path: '/inventory', icon: Package, label: 'Stock' },
++        { path: '/reports', icon: BarChart3, label: 'Reports' },
+         { path: '/settings', icon: Settings, label: 'More' },
+     ];
+ 
+-    const navItems = isClinic ? clinicNav : storeNav;
++    const navItems = isDoctor ? doctorNav : isPharmacist ? pharmacistNav : assistantNav;
+ 
+     return (
+         <nav className="bottom-nav">
+@@ -165,111 +254,339 @@ const BottomNav = () => {
+    PROTECTED LAYOUT
+    ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */
+ const ProtectedLayout = ({ children }) => {
+-    const { user, isClinic } = useAuth();
++    const { user, isDoctor, isPharmacist } = useAuth();
+     if (!user) return <Navigate to="/login" />;
+ 
++    const getSidebar = () => {
++        if (isDoctor) return <DoctorSidebar />;
++        if (isPharmacist) return <PharmacistSidebar />;
++        return <AssistantSidebar />;
++    };
++
+     return (
+         <div className="dashboard-layout">
+             <div className="hidden-mobile">
+-                {isClinic ? <ClinicSidebar /> : <StoreSidebar />}
++                {getSidebar()}
+             </div>
+             <main className="content">{children}</main>
+             <div className="visible-mobile"><BottomNav /></div>
++            ```
+         </div>
+     );
+ };
+ 
+ /* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+-   LOGIN PAGE ΓÇö with Clinic / Store toggle
++   ENTITY STORAGE HELPERS
++   ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */
++const getEntities = () => JSON.parse(localStorage.getItem('scms_entities') || '[]');
++const saveEntities = (entities) => localStorage.setItem('scms_entities', JSON.stringify(entities));
++
++// Seed a default clinic + pharmacy on first load
++const seedDefaults = () => {
++    const existing = getEntities();
++    if (existing.length === 0) {
++        const defaults = [
++            {
++                id: 'CLINIC001', type: 'clinic', name: 'SmartClinic',
++                address: 'MG Road, Mumbai - 400001', phone: '+91 98765 43210',
++                doctor: 'Dr. Payal Patel', specialty: 'General Medicine',
++                users: [
++                    { role: 'doctor', userId: 'doc01', password: 'doc123', displayName: 'Dr. Payal Patel' },
++                    { role: 'assistant', userId: 'asst01', password: 'asst123', displayName: 'Receptionist' },
++                ],
++                createdAt: new Date().toISOString(),
++            },
++            {
++                id: 'PHARMA001', type: 'pharmacy', name: 'SmartPharmacy',
++                address: 'Station Road, Mumbai - 400002', phone: '+91 98765 00001',
++                users: [
++                    { role: 'pharmacist', userId: 'pharm01', password: 'pharm123', displayName: 'Pharmacist' },
++                ],
++                createdAt: new Date().toISOString(),
++            },
++        ];
++        saveEntities(defaults);
++        return defaults;
++    }
++    return existing;
++};
++
++/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
++   LOGIN PAGE ΓÇö Multi-Entity
+    ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */
+ const Login = () => {
+-    const { login } = useAuth();
+-    const [email, setEmail] = useState('doctor@clinic.com');
++    const { login, user } = useAuth();
++    const navigate = useNavigate();
++
++    const [entities, setEntities] = useState(() => seedDefaults());
++    const [selectedEntityId, setSelectedEntityId] = useState(entities[0]?.id || '');
++    const [userId, setUserId] = useState('');
+     const [password, setPassword] = useState('');
+-    const [entityCode, setEntityCode] = useState('CLINIC001');
+-    const [entityType, setEntityType] = useState('clinic'); // 'clinic' or 'store'
++    const [error, setError] = useState('');
+     const [isLoading, setIsLoading] = useState(false);
+ 
++    // Registration modal state
++    const [showRegister, setShowRegister] = useState(null); // 'clinic' or 'pharmacy' or null
++    const [regForm, setRegForm] = useState({
++        name: '', address: '', phone: '',
++        doctorName: '', specialty: 'General Medicine',
++        docUserId: '', docPassword: '',
++        asstUserId: '', asstPassword: '',
++        pharmUserId: '', pharmPassword: '', pharmDisplayName: '',
++    });
++
++    if (user) return <Navigate to="/" />;
++
++    const selectedEntity = entities.find(e => e.id === selectedEntityId);
++    const clinics = entities.filter(e => e.type === 'clinic');
++    const pharmacies = entities.filter(e => e.type === 'pharmacy');
++
+     const handleLogin = async (e) => {
+         e.preventDefault();
++        setError('');
++        if (!selectedEntity) { setError('Please select a clinic or pharmacy.'); return; }
+         setIsLoading(true);
+-        try {
+-            await login(email, password || 'demo', entityCode, entityType);
+-        } catch {
+-            // Error handled inside login
++
++        const matchedUser = selectedEntity.users.find(
++            u => u.userId === userId.trim() && u.password === password
++        );
++
++        if (matchedUser) {
++            await login(matchedUser.displayName, matchedUser.role, selectedEntity.id);
++            navigate('/');
++        } else {
++            setError('Invalid User ID or Password.');
+         }
+         setIsLoading(false);
+     };
+ 
+-    const switchEntityType = (type) => {
+-        setEntityType(type);
+-        if (type === 'clinic') {
+-            setEntityCode('CLINIC001');
+-            setEmail('doctor@clinic.com');
++    const handleRegister = (e) => {
++        e.preventDefault();
++        const isClinic = showRegister === 'clinic';
++        const idPrefix = isClinic ? 'CLN' : 'PHR';
++        const newId = `${idPrefix}${String(Date.now()).slice(-6)}`;
++
++        let newEntity;
++        if (isClinic) {
++            newEntity = {
++                id: newId, type: 'clinic', name: regForm.name,
++                address: regForm.address, phone: regForm.phone,
++                doctor: regForm.doctorName, specialty: regForm.specialty,
++                users: [
++                    { role: 'doctor', userId: regForm.docUserId || 'doctor', password: regForm.docPassword || '1234', displayName: regForm.doctorName || 'Doctor' },
++                    { role: 'assistant', userId: regForm.asstUserId || 'asst', password: regForm.asstPassword || '1234', displayName: 'Receptionist' },
++                ],
++                createdAt: new Date().toISOString(),
++            };
+         } else {
+-            setEntityCode('STORE001');
+-            setEmail('store@medplus.com');
++            newEntity = {
++                id: newId, type: 'pharmacy', name: regForm.name,
++                address: regForm.address, phone: regForm.phone,
++                users: [
++                    { role: 'pharmacist', userId: regForm.pharmUserId || 'pharma', password: regForm.pharmPassword || '1234', displayName: regForm.pharmDisplayName || 'Pharmacist' },
++                ],
++                createdAt: new Date().toISOString(),
++            };
+         }
++
++        const updated = [...entities, newEntity];
++        saveEntities(updated);
++        setEntities(updated);
++        setSelectedEntityId(newId);
++        setShowRegister(null);
++        setRegForm({ name: '', address: '', phone: '', doctorName: '', specialty: 'General Medicine', docUserId: '', docPassword: '', asstUserId: '', asstPassword: '', pharmUserId: '', pharmPassword: '', pharmDisplayName: '' });
+     };
+ 
+     return (
+         <div className="login-container">
+-            <div className="login-card animate-fade-in">
+-                <div className="logo-container centered">
+-                    <div className={`logo-icon large ${entityType === 'store' ? 'store-logo' : ''}`}>
+-                        {entityType === 'clinic' ? 'SC' : 'MP'}
++            {/* ΓöÇΓöÇ Registration Modal ΓöÇΓöÇ */}
++            {showRegister && (
++                <div className="modal-overlay" onClick={() => setShowRegister(null)}>
++                    <div className="modal-content modal-lg animate-fade-in" onClick={e => e.stopPropagation()}>
++                        <div className="modal-header">
++                            <h2>{showRegister === 'clinic' ? '≡ƒÅÑ Register New Clinic' : '≡ƒÆè Register New Pharmacy'}</h2>
++                            <button className="modal-close-btn" onClick={() => setShowRegister(null)}>Γ£ò</button>
++                        </div>
++                        <form onSubmit={handleRegister}>
++                            <div className="form-grid">
++                                <div className="form-group">
++                                    <label>{showRegister === 'clinic' ? 'Clinic Name' : 'Pharmacy Name'} *</label>
++                                    <input required type="text" placeholder={showRegister === 'clinic' ? 'e.g. City Care Clinic' : 'e.g. MedPlus Pharmacy'}
++                                        value={regForm.name} onChange={e => setRegForm({ ...regForm, name: e.target.value })} />
++                                </div>
++                                <div className="form-group">
++                                    <label>Phone</label>
++                                    <input type="text" placeholder="+91 98765 43210"
++                                        value={regForm.phone} onChange={e => setRegForm({ ...regForm, phone: e.target.value })} />
++                                </div>
++                            </div>
++                            <div className="form-group">
++                                <label>Address</label>
++                                <input type="text" placeholder="Full address"
++                                    value={regForm.address} onChange={e => setRegForm({ ...regForm, address: e.target.value })} />
++                            </div>
++
++                            {showRegister === 'clinic' ? (
++                                <>
++                                    <h4 className="font-bold text-sm mt-4 mb-2 flex items-center gap-2">
++                                        <Stethoscope size={14} className="text-primary" /> Doctor Credentials
++                                    </h4>
++                                    <div className="form-grid">
++                                        <div className="form-group">
++                                            <label>Doctor Name *</label>
++                                            <input required type="text" placeholder="Dr. Name"
++                                                value={regForm.doctorName} onChange={e => setRegForm({ ...regForm, doctorName: e.target.value })} />
++                                        </div>
++                                        <div className="form-group">
++                                            <label>Specialty</label>
++                                            <input type="text" placeholder="General Medicine"
++                                                value={regForm.specialty} onChange={e => setRegForm({ ...regForm, specialty: e.target.value })} />
++                                        </div>
++                                    </div>
++                                    <div className="form-grid">
++                                        <div className="form-group">
++                                            <label>Doctor User ID *</label>
++                                            <input required type="text" placeholder="e.g. doc02"
++                                                value={regForm.docUserId} onChange={e => setRegForm({ ...regForm, docUserId: e.target.value })} />
++                                        </div>
++                                        <div className="form-group">
++                                            <label>Doctor Password *</label>
++                                            <input required type="text" placeholder="e.g. pass123"
++                                                value={regForm.docPassword} onChange={e => setRegForm({ ...regForm, docPassword: e.target.value })} />
++                                        </div>
++                                    </div>
++                                    <h4 className="font-bold text-sm mt-4 mb-2 flex items-center gap-2">
++                                        <UserCog size={14} style={{ color: '#10b981' }} /> Assistant Credentials
++                                    </h4>
++                                    <div className="form-grid">
++                                        <div className="form-group">
++                                            <label>Assistant User ID *</label>
++                                            <input required type="text" placeholder="e.g. asst02"
++                                                value={regForm.asstUserId} onChange={e => setRegForm({ ...regForm, asstUserId: e.target.value })} />
++                                        </div>
++                                        <div className="form-group">
++                                            <label>Assistant Password *</label>
++                                            <input required type="text" placeholder="e.g. pass123"
++                                                value={regForm.asstPassword} onChange={e => setRegForm({ ...regForm, asstPassword: e.target.value })} />
++                                        </div>
++                                    </div>
++                                </>
++                            ) : (
++                                <>
++                                    <h4 className="font-bold text-sm mt-4 mb-2 flex items-center gap-2">
++                                        <Pill size={14} style={{ color: '#10b981' }} /> Pharmacist Credentials
++                                    </h4>
++                                    <div className="form-grid">
++                                        <div className="form-group">
++                                            <label>Pharmacist Name</label>
++                                            <input type="text" placeholder="Pharmacist name"
++                                                value={regForm.pharmDisplayName} onChange={e => setRegForm({ ...regForm, pharmDisplayName: e.target.value })} />
++                                        </div>
++                                    </div>
++                                    <div className="form-grid">
++                                        <div className="form-group">
++                                            <label>User ID *</label>
++                                            <input required type="text" placeholder="e.g. pharm02"
++                                                value={regForm.pharmUserId} onChange={e => setRegForm({ ...regForm, pharmUserId: e.target.value })} />
++                                        </div>
++                                        <div className="form-group">
++                                            <label>Password *</label>
++                                            <input required type="text" placeholder="e.g. pass123"
++                                                value={regForm.pharmPassword} onChange={e => setRegForm({ ...regForm, pharmPassword: e.target.value })} />
++                                        </div>
++                                    </div>
++                                </>
++                            )}
++                            <button type="submit" className="primary-btn mt-4" style={{ width: '100%' }}>
++                                {showRegister === 'clinic' ? '≡ƒÅÑ Register Clinic' : '≡ƒÆè Register Pharmacy'}
++                            </button>
++                        </form>
+                     </div>
+-                    <h2>Welcome Back</h2>
+-                    <p className="login-subtitle">
+-                        Sign in to your {entityType === 'clinic' ? 'clinic' : 'medical store'} dashboard
+-                    </p>
++                </div>
++            )}
++
++            {/* ΓöÇΓöÇ Login Card ΓöÇΓöÇ */}
++            <div className="login-card animate-fade-in" style={{ maxWidth: 460 }}>
++                <div className="logo-container centered">
++                    <div className="logo-icon large">SC</div>
++                    <h2>SmartClinic</h2>
++                    <p className="login-subtitle">Clinic & Pharmacy Management System</p>
+                 </div>
+ 
+-                {/* Entity Type Toggle */}
+-                <div className="entity-toggle">
+-                    <button
+-                        type="button"
+-                        className={`entity-toggle-btn ${entityType === 'clinic' ? 'active' : ''}`}
+-                        onClick={() => switchEntityType('clinic')}
+-                    >
+-                        <Building2 size={16} />
+-                        <span>Clinic</span>
++                {/* Add Clinic / Add Pharmacy buttons */}
++                <div className="flex gap-2 mb-4">
++                    <button type="button" className="secondary-btn" style={{ flex: 1, fontSize: '0.82rem', gap: '0.4rem' }}
++                        onClick={() => setShowRegister('clinic')}>
++                        <Stethoscope size={14} /> Add Clinic
+                     </button>
+-                    <button
+-                        type="button"
+-                        className={`entity-toggle-btn ${entityType === 'store' ? 'active' : ''}`}
+-                        onClick={() => switchEntityType('store')}
+-                    >
+-                        <Store size={16} />
+-                        <span>Medical Store</span>
++                    <button type="button" className="secondary-btn" style={{ flex: 1, fontSize: '0.82rem', gap: '0.4rem' }}
++                        onClick={() => setShowRegister('pharmacy')}>
++                        <Pill size={14} /> Add Pharmacy
+                     </button>
+                 </div>
+ 
+                 <form onSubmit={handleLogin}>
++                    {/* Entity Selector */}
+                     <div className="form-group">
+-                        <label>{entityType === 'clinic' ? 'Clinic Code' : 'Store Code'}</label>
+-                        <input
+-                            type="text"
+-                            value={entityCode}
+-                            onChange={(e) => setEntityCode(e.target.value)}
+-                            placeholder={entityType === 'clinic' ? 'e.g. CLINIC001' : 'e.g. STORE001'}
+-                            className="uppercase tracking-widest font-mono"
+-                        />
++                        <label>Select Clinic / Pharmacy</label>
++                        <select
++                            value={selectedEntityId}
++                            onChange={e => { setSelectedEntityId(e.target.value); setError(''); }}
++                            style={{ width: '100%' }}
++                        >
++                            {clinics.length > 0 && <optgroup label="≡ƒÅÑ Clinics">
++                                {clinics.map(c => <option key={c.id} value={c.id}>{c.name} ({c.id})</option>)}
++                            </optgroup>}
++                            {pharmacies.length > 0 && <optgroup label="≡ƒÆè Pharmacies">
++                                {pharmacies.map(p => <option key={p.id} value={p.id}>{p.name} ({p.id})</option>)}
++                            </optgroup>}
++                        </select>
+                     </div>
++
++                    {/* Show which roles exist for this entity */}
++                    {selectedEntity && (
++                        <div className="flex gap-2 mb-3 flex-wrap">
++                            {selectedEntity.users.map(u => (
++                                <span key={u.role} className={`status-badge ${u.role === 'doctor' ? 'status-active' : u.role === 'pharmacist' ? 'status-done' : 'status-waiting'}`}>
++                                    {u.role === 'doctor' ? '≡ƒæ¿ΓÇìΓÜò∩╕Å' : u.role === 'pharmacist' ? '≡ƒÆè' : '≡ƒºæΓÇì≡ƒÆ╝'} {u.role}
++                                </span>
++                            ))}
++                        </div>
++                    )}
++
+                     <div className="form-group">
+-                        <label>Email Address</label>
+-                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
++                        <label>User ID</label>
++                        <input required type="text" value={userId}
++                            onChange={(e) => setUserId(e.target.value)}
++                            placeholder="Enter your User ID" autoComplete="username" />
+                     </div>
+                     <div className="form-group">
+                         <label>Password</label>
+-                        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="ΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇó" />
++                        <input required type="password" value={password}
++                            onChange={(e) => setPassword(e.target.value)}
++                            placeholder="Enter your password" autoComplete="current-password" />
+                     </div>
+-                    <button type="submit" className="primary-btn" disabled={isLoading}>
+-                        {isLoading ? 'Signing in...' : `Sign In as ${entityType === 'clinic' ? 'Clinic' : 'Store'}`}
++
++                    {error && (
++                        <p style={{ color: 'var(--accent)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.75rem', textAlign: 'center' }}>
++                            {error}
++                        </p>
++                    )}
++
++                    <button type="submit" className="primary-btn" disabled={isLoading} style={{ width: '100%' }}>
++                        {isLoading ? 'Signing in...' : 'Sign In'}
+                     </button>
+-                    <p className="forgot-password text-center mt-4">
+-                        Register your {entityType === 'clinic' ? 'clinic' : 'medical store'}?
+-                    </p>
++
++                    {/* Default credentials hint */}
++                    <div className="login-info mt-4" style={{ background: 'var(--background)', padding: '0.85rem', borderRadius: 'var(--radius)', textAlign: 'left' }}>
++                        <p className="text-xs font-bold text-muted" style={{ marginBottom: '0.4rem' }}>
++                            <Shield size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> Default Demo Credentials
++                        </p>
++                        <p className="text-xs text-muted" style={{ lineHeight: 1.8 }}>
++                            <strong>SmartClinic ΓåÆ</strong> Doctor: <code>doc01</code>/<code>doc123</code> ┬╖ Asst: <code>asst01</code>/<code>asst123</code><br />
++                            <strong>SmartPharmacy ΓåÆ</strong> Pharmacist: <code>pharm01</code>/<code>pharm123</code>
++                        </p>
++                    </div>
+                 </form>
+             </div>
+         </div>
+@@ -277,37 +594,63 @@ const Login = () => {
+ };
+ 
+ /* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+-   APP ROOT ΓÇö Routes for both entity types
++   APP ROOT ΓÇö Role-based Routes
+    ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */
+ const AppRoutes = () => {
+-    const { isClinic, isStore } = useAuth();
++    const { isDoctor, isAssistant, isPharmacist } = useAuth();
+ 
+     return (
+         <Routes>
+             <Route path="/login" element={<Login />} />
+ 
+-            {/* Dashboard ΓÇö different for each entity type */}
++            {/* Dashboard ΓÇö role-aware */}
+             <Route path="/" element={
+                 <ProtectedLayout>
+-                    {isStore ? <PharmacyDashboard /> : <Dashboard />}
++                    {isPharmacist ? <PharmacyDashboard /> : <Dashboard />}
+                 </ProtectedLayout>
+             } />
+ 
+-            {/* Clinic-specific routes */}
++            {/* Shared clinic pages (Doctor + Assistant) */}
++            <Route path="/queue" element={<ProtectedLayout><Queue /></ProtectedLayout>} />
+             <Route path="/patients" element={<ProtectedLayout><Patients /></ProtectedLayout>} />
+-            <Route path="/appointments" element={<ProtectedLayout><Appointments /></ProtectedLayout>} />
+-            <Route path="/consultations" element={<ProtectedLayout><Consultation /></ProtectedLayout>} />
+-
+-            {/* Store-specific routes */}
+-            <Route path="/inventory" element={<ProtectedLayout><Inventory /></ProtectedLayout>} />
+-            <Route path="/prescriptions" element={<ProtectedLayout><Prescriptions /></ProtectedLayout>} />
+-
+-            {/* Shared routes */}
+-            <Route path="/billing" element={<ProtectedLayout><Billing /></ProtectedLayout>} />
+             <Route path="/reports" element={<ProtectedLayout><Reports /></ProtectedLayout>} />
+             <Route path="/settings" element={<ProtectedLayout><SettingsPage /></ProtectedLayout>} />
+-            <Route path="/linked-stores" element={<ProtectedLayout><LinkedEntities /></ProtectedLayout>} />
+-            <Route path="/linked-clinics" element={<ProtectedLayout><LinkedEntities /></ProtectedLayout>} />
++
++            {/* Dispensary ΓÇö shared between Doctor and Assistant */}
++            <Route path="/indoor-dispensary" element={<ProtectedLayout><IndoorDispensary /></ProtectedLayout>} />
++            <Route path="/outdoor-dispensary" element={<ProtectedLayout><OutdoorDispensary /></ProtectedLayout>} />
++            <Route path="/documents" element={<ProtectedLayout><DocumentScanner /></ProtectedLayout>} />
++
++            {/* Doctor-only */}
++            <Route path="/consultations" element={
++                <ProtectedLayout>
++                    {isDoctor ? <Consultation /> : <Navigate to="/" />}
++                </ProtectedLayout>
++            } />
++            <Route path="/diet-templates" element={
++                <ProtectedLayout>
++                    {isDoctor ? <DietTemplates /> : <Navigate to="/" />}
++                </ProtectedLayout>
++            } />
++
++            {/* Assistant-only */}
++            <Route path="/billing" element={
++                <ProtectedLayout>
++                    {isAssistant ? <Billing /> : <Navigate to="/" />}
++                </ProtectedLayout>
++            } />
++
++            {/* Pharmacist-only */}
++            <Route path="/inventory" element={
++                <ProtectedLayout>
++                    {isPharmacist ? <Inventory /> : <Navigate to="/" />}
++                </ProtectedLayout>
++            } />
++            <Route path="/prescriptions" element={
++                <ProtectedLayout>
++                    {isPharmacist ? <Prescriptions /> : <Navigate to="/" />}
++                </ProtectedLayout>
++            } />
+ 
+             <Route path="*" element={<Navigate to="/" />} />
+         </Routes>
+@@ -315,6 +658,16 @@ const AppRoutes = () => {
+ };
+ 
+ function App() {
++    // One-time migration to force 'Dr. Sharma' to 'Dr. Payal Patel' in browser storage without clearing cache
++    useEffect(() => {
++        ['scms_entities', 'scms_user', 'scms_patients', 'scms_queue', 'store_prescriptions', 'store_inventory'].forEach(key => {
++            const data = localStorage.getItem(key);
++            if (data && data.includes('Dr. Sharma')) {
++                localStorage.setItem(key, data.replace(/Dr\. Sharma/g, 'Dr. Payal Patel'));
++            }
++        });
++    }, []);
++
+     return (
+         <AuthProvider>
+             <Router>
+diff --git a/src/context/AuthContext.jsx b/src/context/AuthContext.jsx
+index 888ed94..e87c1b4 100644
+--- a/src/context/AuthContext.jsx
++++ b/src/context/AuthContext.jsx
+@@ -5,51 +5,57 @@ const AuthContext = createContext();
+ export const useAuth = () => useContext(AuthContext);
+ 
+ export const AuthProvider = ({ children }) => {
+-    const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
++    const [user, setUser] = useState(JSON.parse(localStorage.getItem('scms_user')));
+     const [loading, setLoading] = useState(false);
+ 
+     /**
+-     * Login supports two entity types:
+-     *  - 'clinic'   ΓåÆ Doctor/Receptionist dashboard
+-     *  - 'store'    ΓåÆ Medical Store dashboard
++     * Login with role selection:
++     *  - 'doctor'     ΓåÆ Full consultation, EMR, prescription, lab referral access
++     *  - 'assistant'  ΓåÆ Patient registration, queue management, billing/receipts
++     *  - 'pharmacist' ΓåÆ Inventory management, incoming prescriptions, dispensing
+      */
+-    const login = (email, password, entityCode = 'CLINIC001', entityType = 'clinic') => {
+-        const isStore = entityType === 'store';
+-
+-        const dummyUser = {
+-            email,
+-            name: isStore ? 'MedPlus Pharmacy' : 'Dr. Sharma',
+-            role: isStore ? 'pharmacist' : 'doctor',
+-            entityType, // 'clinic' or 'store'
+-            id: isStore ? 'store_001' : 'doc_001',
+-            clinicId: isStore ? null : entityCode,
+-            storeId: isStore ? entityCode : null,
+-            entityId: entityCode, // universal ID for data scoping
+-            subscription: 'premium',
+-            // Linked entities: clinics linked to this store / stores linked to this clinic
+-            linkedStores: isStore ? [] : ['STORE001', 'STORE002'],
+-            linkedClinics: isStore ? ['CLINIC001', 'CLINIC002'] : [],
++    const login = (name, role = 'doctor', clinicCode = 'CLINIC001') => {
++        const roleConfig = {
++            doctor: { defaultName: 'Dr. Payal Patel', idPrefix: 'doc_001' },
++            assistant: { defaultName: 'Receptionist', idPrefix: 'asst_001' },
++            pharmacist: { defaultName: 'Pharmacist', idPrefix: 'pharm_001' },
+         };
+-        localStorage.setItem('user', JSON.stringify(dummyUser));
+-        setUser(dummyUser);
+-        return Promise.resolve(dummyUser);
++
++        const cfg = roleConfig[role] || roleConfig.doctor;
++
++        const userData = {
++            name: name || cfg.defaultName,
++            role,
++            id: cfg.idPrefix,
++            clinicId: clinicCode,
++            clinicName: 'SmartClinic',
++            clinicAddress: 'MG Road, Mumbai - 400001',
++            clinicPhone: '+91 98765 43210',
++            specialty: role === 'doctor' ? 'General Medicine' : role === 'pharmacist' ? 'Pharmacy' : 'Reception',
++            loggedInAt: new Date().toISOString(),
++        };
++        localStorage.setItem('scms_user', JSON.stringify(userData));
++        setUser(userData);
++        return Promise.resolve(userData);
+     };
+ 
+     const logout = () => {
+-        localStorage.removeItem('user');
++        localStorage.removeItem('scms_user');
+         setUser(null);
+     };
+ 
+-    const isClinic = user?.entityType === 'clinic';
+-    const isStore = user?.entityType === 'store';
++    const isDoctor = user?.role === 'doctor';
++    const isAssistant = user?.role === 'assistant';
++    const isPharmacist = user?.role === 'pharmacist';
+ 
+     const value = {
+         user,
+         login,
+         logout,
+         loading,
+-        isClinic,
+-        isStore,
++        isDoctor,
++        isAssistant,
++        isPharmacist,
+     };
+ 
+     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+diff --git a/src/hooks/useAppointments.js b/src/hooks/useAppointments.js
+index 8319438..7622f1d 100644
+--- a/src/hooks/useAppointments.js
++++ b/src/hooks/useAppointments.js
+@@ -4,25 +4,30 @@ import useLocalStorage from './useLocalStorage';
+ const today = new Date().toISOString().split('T')[0];
+ 
+ const DEMO_QUEUE = [
+-    { token: 'T-001', patientId: 'PAT001', name: 'Rahul Verma', mobile: '9876543210', status: 'Completed', time: '09:15 AM', date: today, type: 'Follow-up' },
+-    { token: 'T-002', patientId: 'PAT002', name: 'Sita Rani', mobile: '8765432109', status: 'Completed', time: '09:30 AM', date: today, type: 'New' },
+-    { token: 'T-003', patientId: 'PAT003', name: 'Amit Singh', mobile: '7654321098', status: 'Completed', time: '09:45 AM', date: today, type: 'Follow-up' },
+-    { token: 'T-004', patientId: 'PAT004', name: 'Priya Desai', mobile: '6543210987', status: 'Completed', time: '10:00 AM', date: today, type: 'New' },
+-    { token: 'T-005', patientId: 'PAT005', name: 'Karan Malhotra', mobile: '5432109876', status: 'Consulting', time: '10:15 AM', date: today, type: 'Walk-in' },
+-    { token: 'T-006', patientId: null, name: 'Neha Gupta', mobile: '9123456780', status: 'Waiting', time: '10:30 AM', date: today, type: 'Walk-in' },
+-    { token: 'T-007', patientId: null, name: 'Ravi Kumar', mobile: '9012345678', status: 'Waiting', time: '10:45 AM', date: today, type: 'New' },
+-    { token: 'T-008', patientId: null, name: 'Deepa Patel', mobile: '8901234567', status: 'Waiting', time: '11:00 AM', date: today, type: 'Follow-up' },
++    { token: 'T-001', patientId: 'PAT001', name: 'Rahul Verma', mobile: '9876543210', status: 'Completed', time: '09:15 AM', date: today, type: 'Follow-up', fee: 300 },
++    { token: 'T-002', patientId: 'PAT002', name: 'Sita Rani', mobile: '8765432109', status: 'Completed', time: '09:30 AM', date: today, type: 'New', fee: 500 },
++    { token: 'T-003', patientId: 'PAT003', name: 'Amit Singh', mobile: '7654321098', status: 'Completed', time: '09:45 AM', date: today, type: 'Follow-up', fee: 300 },
++    { token: 'T-004', patientId: 'PAT004', name: 'Priya Desai', mobile: '6543210987', status: 'Consulting', time: '10:00 AM', date: today, type: 'New', fee: 500 },
++    { token: 'T-005', patientId: 'PAT005', name: 'Karan Malhotra', mobile: '5432109876', status: 'Waiting', time: '10:15 AM', date: today, type: 'Walk-in', fee: 300 },
++    { token: 'T-006', patientId: null, name: 'Neha Gupta', mobile: '9123456780', status: 'Waiting', time: '10:30 AM', date: today, type: 'Walk-in', fee: 300 },
++    { token: 'T-007', patientId: null, name: 'Ravi Kumar', mobile: '9012345678', status: 'Waiting', time: '10:45 AM', date: today, type: 'New', fee: 500 },
+ ];
+ 
+-const useAppointments = () => {
+-    const [queue, setQueue] = useLocalStorage('appointments', DEMO_QUEUE);
++const useQueue = () => {
++    const [queue, setQueue] = useLocalStorage('queue', DEMO_QUEUE);
+ 
+     const todayQueue = queue.filter(q => q.date === today);
+     const waitingCount = todayQueue.filter(q => q.status === 'Waiting').length;
+     const completedCount = todayQueue.filter(q => q.status === 'Completed').length;
+-    const consultingItem = todayQueue.find(q => q.status === 'Consulting');
++    const consultingItem = todayQueue.find(q => q.status === 'Consulting') || null;
++    const waitingList = todayQueue.filter(q => q.status === 'Waiting');
+ 
+-    const nextToken = `T-${String(queue.length + 1).padStart(3, '0')}`;
++    const nextTokenNum = queue.length + 1;
++    const nextToken = `T-${String(nextTokenNum).padStart(3, '0')}`;
++
++    const todayRevenue = todayQueue
++        .filter(q => q.status === 'Completed')
++        .reduce((sum, q) => sum + (q.fee || 0), 0);
+ 
+     const addToQueue = useCallback((patientData) => {
+         const now = new Date();
+@@ -35,7 +40,8 @@ const useAppointments = () => {
+             status: 'Waiting',
+             time: timeStr,
+             date: today,
+-            type: patientData.type || 'Walk-in'
++            type: patientData.type || 'Walk-in',
++            fee: patientData.fee || 300,
+         };
+         setQueue(prev => [...prev, newItem]);
+         return newItem;
+@@ -44,7 +50,8 @@ const useAppointments = () => {
+     const callPatient = useCallback((token) => {
+         setQueue(prev => prev.map(q => {
+             if (q.token === token) return { ...q, status: 'Consulting' };
+-            if (q.status === 'Consulting') return { ...q, status: 'Completed' };
++            // Auto-complete the currently consulting patient
++            if (q.status === 'Consulting' && q.date === today) return { ...q, status: 'Completed' };
+             return q;
+         }));
+     }, [setQueue]);
+@@ -61,19 +68,29 @@ const useAppointments = () => {
+         ));
+     }, [setQueue]);
+ 
++    // Update fee for a specific token
++    const updateFee = useCallback((token, fee) => {
++        setQueue(prev => prev.map(q =>
++            q.token === token ? { ...q, fee: Number(fee) } : q
++        ));
++    }, [setQueue]);
++
+     return {
+         queue: todayQueue,
+         allQueue: queue,
+         waitingCount,
+         completedCount,
+         consultingItem,
++        waitingList,
+         nextToken,
++        todayRevenue,
+         addToQueue,
+         callPatient,
+         markCompleted,
+         skipPatient,
+-        totalToday: todayQueue.length
++        updateFee,
++        totalToday: todayQueue.length,
+     };
+ };
+ 
+-export default useAppointments;
++export default useQueue;
+diff --git a/src/hooks/useLocalStorage.js b/src/hooks/useLocalStorage.js
+index 93381e7..336566c 100644
+--- a/src/hooks/useLocalStorage.js
++++ b/src/hooks/useLocalStorage.js
+@@ -2,14 +2,13 @@ import { useState, useEffect } from 'react';
+ import { useAuth } from '../context/AuthContext';
+ 
+ /**
+- * Multi-tenant localStorage hook.
+- * Data is scoped by entityId (clinic OR store) so different entities have isolated data.
++ * Clinic-scoped localStorage hook.
++ * Data is scoped by clinicId so different clinics have isolated data.
+  */
+ export const useLocalStorage = (key, initialValue) => {
+     const { user } = useAuth();
+-    // Use entityId for universal scoping ΓÇö works for both clinics and stores
+-    const scopeId = user?.entityId || user?.clinicId || user?.storeId || 'default';
+-    const scopedKey = `${scopeId}_${key}`;
++    const scopeId = user?.clinicId || 'default';
++    const scopedKey = `scms_${scopeId}_${key}`;
+ 
+     const [storedValue, setStoredValue] = useState(() => {
+         try {
+diff --git a/src/hooks/usePatients.js b/src/hooks/usePatients.js
+index 4b1a7c0..1796ab3 100644
+--- a/src/hooks/usePatients.js
++++ b/src/hooks/usePatients.js
+@@ -1,12 +1,106 @@
+-import { useState, useEffect, useCallback } from 'react';
++import { useState, useCallback } from 'react';
+ import useLocalStorage from './useLocalStorage';
+ 
+ const DEMO_PATIENTS = [
+-    { id: 'PAT001', name: 'Rahul Verma', age: 34, gender: 'Male', mobile: '9876543210', lastVisit: '2024-02-15', address: 'Andheri West, Mumbai', history: 'Hypertension' },
+-    { id: 'PAT002', name: 'Sita Rani', age: 28, gender: 'Female', mobile: '8765432109', lastVisit: '2024-02-10', address: 'Bandra, Mumbai', history: 'No known allergies' },
+-    { id: 'PAT003', name: 'Amit Singh', age: 45, gender: 'Male', mobile: '7654321098', lastVisit: '2024-01-20', address: 'Juhu, Mumbai', history: 'Diabetes Type 2' },
+-    { id: 'PAT004', name: 'Priya Desai', age: 52, gender: 'Female', mobile: '6543210987', lastVisit: '2024-02-18', address: 'Powai, Mumbai', history: 'Asthma' },
+-    { id: 'PAT005', name: 'Karan Malhotra', age: 31, gender: 'Male', mobile: '5432109876', lastVisit: '2024-02-19', address: 'Dadar, Mumbai', history: '' },
++    {
++        id: 'PAT001', name: 'Rahul Verma', age: 34, gender: 'Male',
++        mobile: '9876543210', address: 'Andheri West, Mumbai',
++        bloodGroup: 'O+', allergies: 'None',
++        registeredOn: '2024-01-10',
++        visits: [
++            {
++                date: '2024-02-15', doctor: 'Dr. Payal Patel',
++                symptoms: 'Fever, Headache, Body ache',
++                vitals: { bp: '120/80', temp: '101.2┬░F', pulse: '88 bpm', weight: '72 kg', spo2: '97%' },
++                diagnosis: 'Viral Fever',
++                medicines: [
++                    { name: 'Paracetamol', dosage: '500mg', frequency: '1-0-1', duration: '3 days' },
++                    { name: 'Cetirizine', dosage: '10mg', frequency: '0-0-1', duration: '5 days' }
++                ],
++                labReferrals: ['CBC', 'Dengue NS1'],
++                notes: 'Follow up after 3 days if fever persists'
++            }
++        ]
++    },
++    {
++        id: 'PAT002', name: 'Sita Rani', age: 28, gender: 'Female',
++        mobile: '8765432109', address: 'Bandra, Mumbai',
++        bloodGroup: 'B+', allergies: 'Penicillin',
++        registeredOn: '2024-01-15',
++        visits: [
++            {
++                date: '2024-02-10', doctor: 'Dr. Payal Patel',
++                symptoms: 'Sore throat, cough',
++                vitals: { bp: '110/70', temp: '99.5┬░F', pulse: '76 bpm', weight: '58 kg', spo2: '98%' },
++                diagnosis: 'Upper Respiratory Tract Infection',
++                medicines: [
++                    { name: 'Azithromycin', dosage: '500mg', frequency: '1-0-0', duration: '3 days' },
++                    { name: 'Cough Syrup (Dextromethorphan)', dosage: '10ml', frequency: '1-1-1', duration: '5 days' }
++                ],
++                labReferrals: [],
++                notes: 'Allergic to Penicillin ΓÇö use Azithromycin'
++            }
++        ]
++    },
++    {
++        id: 'PAT003', name: 'Amit Singh', age: 45, gender: 'Male',
++        mobile: '7654321098', address: 'Juhu, Mumbai',
++        bloodGroup: 'A+', allergies: 'None',
++        registeredOn: '2023-11-20',
++        visits: [
++            {
++                date: '2024-02-18', doctor: 'Dr. Payal Patel',
++                symptoms: 'Routine checkup, dizziness',
++                vitals: { bp: '145/92', temp: '98.6┬░F', pulse: '82 bpm', weight: '85 kg', spo2: '96%' },
++                diagnosis: 'Hypertension (Stage 1)',
++                medicines: [
++                    { name: 'Amlodipine', dosage: '5mg', frequency: '1-0-0', duration: '30 days' },
++                    { name: 'Metformin', dosage: '500mg', frequency: '1-0-1', duration: '30 days' }
++                ],
++                labReferrals: ['Lipid Profile', 'HbA1c', 'Kidney Function Test'],
++                notes: 'Advise dietary modifications, reduce salt intake'
++            },
++            {
++                date: '2024-01-20', doctor: 'Dr. Payal Patel',
++                symptoms: 'Blood sugar follow-up',
++                vitals: { bp: '140/88', temp: '98.4┬░F', pulse: '78 bpm', weight: '86 kg', spo2: '97%' },
++                diagnosis: 'Diabetes Type 2 ΓÇö controlled',
++                medicines: [
++                    { name: 'Metformin', dosage: '500mg', frequency: '1-0-1', duration: '30 days' }
++                ],
++                labReferrals: ['Fasting Blood Sugar', 'HbA1c'],
++                notes: 'HbA1c improved from 7.8 to 7.1'
++            }
++        ]
++    },
++    {
++        id: 'PAT004', name: 'Priya Desai', age: 52, gender: 'Female',
++        mobile: '6543210987', address: 'Powai, Mumbai',
++        bloodGroup: 'AB+', allergies: 'Sulfa drugs',
++        registeredOn: '2023-12-05',
++        visits: [
++            {
++                date: '2024-02-19', doctor: 'Dr. Payal Patel',
++                symptoms: 'Wheezing, breathlessness on exertion',
++                vitals: { bp: '125/82', temp: '98.4┬░F', pulse: '92 bpm', weight: '65 kg', spo2: '93%' },
++                diagnosis: 'Bronchial Asthma ΓÇö Acute Exacerbation',
++                medicines: [
++                    { name: 'Salbutamol Inhaler', dosage: '100mcg', frequency: 'SOS', duration: 'As needed' },
++                    { name: 'Montelukast', dosage: '10mg', frequency: '0-0-1', duration: '30 days' },
++                    { name: 'Budesonide Inhaler', dosage: '200mcg', frequency: '1-0-1', duration: '30 days' }
++                ],
++                labReferrals: ['Chest X-Ray', 'Pulmonary Function Test'],
++                notes: 'Avoid cold air, dust exposure. Allergic to Sulfa drugs.'
++            }
++        ]
++    },
++    {
++        id: 'PAT005', name: 'Karan Malhotra', age: 31, gender: 'Male',
++        mobile: '5432109876', address: 'Dadar, Mumbai',
++        bloodGroup: 'B-', allergies: 'None',
++        registeredOn: '2024-02-01',
++        visits: []
++    },
+ ];
+ 
+ const usePatients = () => {
+@@ -23,7 +117,10 @@ const usePatients = () => {
+         const newPatient = {
+             ...patientData,
+             id: `PAT${String(patients.length + 1).padStart(3, '0')}`,
+-            lastVisit: new Date().toISOString().split('T')[0]
++            registeredOn: new Date().toISOString().split('T')[0],
++            visits: [],
++            bloodGroup: patientData.bloodGroup || '',
++            allergies: patientData.allergies || 'None',
+         };
+         setPatients(prev => [newPatient, ...prev]);
+         return newPatient;
+@@ -41,6 +138,25 @@ const usePatients = () => {
+         return patients.find(p => p.id === id);
+     }, [patients]);
+ 
++    // Add a visit record to a patient's EMR
++    const addVisit = useCallback((patientId, visitData) => {
++        setPatients(prev => prev.map(p => {
++            if (p.id === patientId) {
++                return {
++                    ...p,
++                    visits: [visitData, ...(p.visits || [])],
++                };
++            }
++            return p;
++        }));
++    }, [setPatients]);
++
++    // Get last visit for a patient
++    const getLastVisit = useCallback((patientId) => {
++        const patient = patients.find(p => p.id === patientId);
++        return patient?.visits?.[0] || null;
++    }, [patients]);
++
+     return {
+         patients,
+         filteredPatients,
+@@ -50,7 +166,9 @@ const usePatients = () => {
+         updatePatient,
+         deletePatient,
+         getPatient,
+-        totalPatients: patients.length
++        addVisit,
++        getLastVisit,
++        totalPatients: patients.length,
+     };
+ };
+ 
+diff --git a/src/pages/Appointments.jsx b/src/pages/Appointments.jsx
+index 7dd72cb..6b0f5a9 100644
+--- a/src/pages/Appointments.jsx
++++ b/src/pages/Appointments.jsx
+@@ -1,28 +1,27 @@
+ import { useState } from 'react';
+-import { Clock, CheckCircle2, Play, MoreVertical, Plus, User, SkipForward, Users } from 'lucide-react';
+-import useAppointments from '../hooks/useAppointments';
++import { Clock, CheckCircle2, Play, MoreVertical, Plus, User, SkipForward, Users, Wallet } from 'lucide-react';
++import useQueue from '../hooks/useAppointments';
++import usePatients from '../hooks/usePatients';
++import { useAuth } from '../context/AuthContext';
+ import PageHeader from '../components/PageHeader';
+ import StatCard from '../components/StatCard';
+ import Modal from '../components/Modal';
+ import EmptyState from '../components/EmptyState';
+ import { showToast } from '../components/Toast';
+ 
+-const Appointments = () => {
++const Queue = () => {
++    const { isDoctor, isAssistant } = useAuth();
++    const { patients } = usePatients();
+     const {
+-        queue,
+-        waitingCount,
+-        completedCount,
+-        consultingItem,
+-        nextToken,
+-        totalToday,
+-        addToQueue,
+-        callPatient,
+-        markCompleted,
+-        skipPatient
+-    } = useAppointments();
++        queue, waitingCount, completedCount, consultingItem,
++        nextToken, totalToday, todayRevenue,
++        addToQueue, callPatient, markCompleted, skipPatient
++    } = useQueue();
+ 
+     const [isWalkInOpen, setIsWalkInOpen] = useState(false);
+-    const [walkIn, setWalkIn] = useState({ name: '', mobile: '', type: 'Walk-in' });
++    const [isRegisteredOpen, setIsRegisteredOpen] = useState(false);
++    const [walkIn, setWalkIn] = useState({ name: '', mobile: '', type: 'Walk-in', fee: 300 });
++    const [patientSearch, setPatientSearch] = useState('');
+ 
+     const getStatusColor = (status) => {
+         switch (status) {
+@@ -38,10 +37,23 @@ const Appointments = () => {
+         e.preventDefault();
+         const item = addToQueue(walkIn);
+         showToast(`${walkIn.name} added as ${item.token}`, 'success');
+-        setWalkIn({ name: '', mobile: '', type: 'Walk-in' });
++        setWalkIn({ name: '', mobile: '', type: 'Walk-in', fee: 300 });
+         setIsWalkInOpen(false);
+     };
+ 
++    const handleAddRegistered = (patient) => {
++        const item = addToQueue({
++            id: patient.id,
++            name: patient.name,
++            mobile: patient.mobile,
++            type: 'Registered',
++            fee: 300,
++        });
++        showToast(`${patient.name} added as ${item.token}`, 'success');
++        setIsRegisteredOpen(false);
++        setPatientSearch('');
++    };
++
+     const handleCall = (token, name) => {
+         callPatient(token);
+         showToast(`Calling ${name}...`, 'info');
+@@ -57,29 +69,68 @@ const Appointments = () => {
+         showToast(`${name} skipped`, 'info');
+     };
+ 
++    const filteredRegistered = patients.filter(p =>
++        p.name.toLowerCase().includes(patientSearch.toLowerCase()) || p.mobile.includes(patientSearch)
++    );
++
+     return (
+         <div className="animate-fade-in">
+             <PageHeader title="Live Queue" subtitle="Real-time patient tracking & token management">
+-                <button className="secondary-btn">
+-                    <Clock size={15} /> Today's Settings
+-                </button>
+-                <button className="primary-btn-sm" onClick={() => setIsWalkInOpen(true)}>
+-                    <Plus size={15} /> Walk-in
+-                </button>
++                {isAssistant && (
++                    <>
++                        <button className="secondary-btn" onClick={() => setIsRegisteredOpen(true)}>
++                            <User size={15} /> From Records
++                        </button>
++                        <button className="primary-btn-sm" onClick={() => setIsWalkInOpen(true)}>
++                            <Plus size={15} /> Walk-in
++                        </button>
++                    </>
++                )}
+             </PageHeader>
+ 
+             <div className="stats-grid">
+                 <StatCard icon={Clock} label="Waiting" value={waitingCount} />
+                 <StatCard icon={CheckCircle2} label="Completed" value={completedCount} />
+                 <StatCard icon={Users} label="Total Today" value={totalToday} />
+-                <StatCard icon={User} label="Next Token" value={nextToken} variant="luxury" />
++                {isAssistant ? (
++                    <StatCard icon={User} label="Next Token" value={nextToken} variant="luxury" />
++                ) : (
++                    <StatCard icon={Wallet} label="Revenue Today" value={`Γé╣${todayRevenue.toLocaleString()}`} variant="luxury" />
++                )}
+             </div>
+ 
++            {/* Currently Consulting Highlight */}
++            {consultingItem && (
++                <div className="consulting-highlight glass mb-6">
++                    <div className="flex items-center gap-4">
++                        <div className="token-id" style={{ background: 'var(--emerald)', color: 'white', border: 'none' }}>
++                            {consultingItem.token}
++                        </div>
++                        <div>
++                            <h3 className="font-bold">{consultingItem.name}</h3>
++                            <p className="text-sm text-muted">{consultingItem.type} ΓÇó {consultingItem.time} ΓÇó Γé╣{consultingItem.fee}</p>
++                        </div>
++                    </div>
++                    <div className="flex items-center gap-3">
++                        <span className="status-badge status-active">In Consultation</span>
++                        {isAssistant && (
++                            <button
++                                className="icon-btn success"
++                                title="Mark Completed"
++                                onClick={() => handleComplete(consultingItem.token, consultingItem.name)}
++                            >
++                                <CheckCircle2 size={18} />
++                            </button>
++                        )}
++                    </div>
++                </div>
++            )}
++
+             <div className="queue-container glass">
+                 <div className="queue-header">
+                     <h3 className="font-bold">Token List</h3>
+                     <div className="flex gap-2">
+-                        <span className="tag">Morning Slot (09:00 ΓÇô 13:00)</span>
++                        <span className="tag">Morning Session</span>
+                     </div>
+                 </div>
+ 
+@@ -87,12 +138,12 @@ const Appointments = () => {
+                     <EmptyState
+                         icon={Clock}
+                         title="No appointments yet"
+-                        subtitle="Add a walk-in patient or wait for scheduled appointments"
++                        subtitle="Add a walk-in patient or registered patient to the queue"
+                     />
+                 ) : (
+                     <div className="queue-list">
+                         {queue.map((item) => (
+-                            <div key={item.token} className="queue-item">
++                            <div key={item.token} className={`queue-item ${item.status === 'Consulting' ? 'queue-item-active' : ''}`}>
+                                 <div className="queue-left">
+                                     <div className="token-id">{item.token}</div>
+                                     <div className="patient-meta">
+@@ -101,6 +152,7 @@ const Appointments = () => {
+                                             {item.mobile && `${item.mobile} ΓÇó `}
+                                             {item.time}
+                                             {item.type && ` ΓÇó ${item.type}`}
++                                            {` ΓÇó Γé╣${item.fee || 0}`}
+                                         </p>
+                                     </div>
+                                 </div>
+@@ -110,38 +162,22 @@ const Appointments = () => {
+                                         {item.status}
+                                     </span>
+ 
+-                                    {item.status === 'Waiting' && (
++                                    {isAssistant && item.status === 'Waiting' && (
+                                         <>
+-                                            <button
+-                                                className="icon-btn primary"
+-                                                title="Call Patient"
+-                                                onClick={() => handleCall(item.token, item.name)}
+-                                            >
++                                            <button className="icon-btn primary" title="Call Patient" onClick={() => handleCall(item.token, item.name)}>
+                                                 <Play size={16} fill="currentColor" />
+                                             </button>
+-                                            <button
+-                                                className="icon-btn"
+-                                                title="Skip"
+-                                                onClick={() => handleSkip(item.token, item.name)}
+-                                            >
++                                            <button className="icon-btn" title="Skip" onClick={() => handleSkip(item.token, item.name)}>
+                                                 <SkipForward size={16} />
+                                             </button>
+                                         </>
+                                     )}
+ 
+-                                    {item.status === 'Consulting' && (
+-                                        <button
+-                                            className="icon-btn success"
+-                                            title="Mark Completed"
+-                                            onClick={() => handleComplete(item.token, item.name)}
+-                                        >
++                                    {isAssistant && item.status === 'Consulting' && (
++                                        <button className="icon-btn success" title="Mark Completed" onClick={() => handleComplete(item.token, item.name)}>
+                                             <CheckCircle2 size={16} />
+                                         </button>
+                                     )}
+-
+-                                    <button className="icon-btn" title="More options">
+-                                        <MoreVertical size={16} />
+-                                    </button>
+                                 </div>
+                             </div>
+                         ))}
+@@ -153,40 +189,61 @@ const Appointments = () => {
+             <Modal isOpen={isWalkInOpen} onClose={() => setIsWalkInOpen(false)} title="Add Walk-in Patient" size="sm">
+                 <form onSubmit={handleAddWalkIn}>
+                     <div className="form-group">
+-                        <label>Patient Name</label>
+-                        <input
+-                            required
+-                            type="text"
+-                            placeholder="Full name"
+-                            value={walkIn.name}
+-                            onChange={e => setWalkIn({ ...walkIn, name: e.target.value })}
+-                        />
++                        <label>Patient Name *</label>
++                        <input required type="text" placeholder="Full name"
++                            value={walkIn.name} onChange={e => setWalkIn({ ...walkIn, name: e.target.value })} />
+                     </div>
+                     <div className="form-group">
+                         <label>Mobile Number</label>
+-                        <input
+-                            type="tel"
+-                            placeholder="+91 XXXXX XXXXX"
+-                            value={walkIn.mobile}
+-                            onChange={e => setWalkIn({ ...walkIn, mobile: e.target.value })}
+-                        />
++                        <input type="tel" placeholder="+91 XXXXX XXXXX"
++                            value={walkIn.mobile} onChange={e => setWalkIn({ ...walkIn, mobile: e.target.value })} />
+                     </div>
+-                    <div className="form-group">
+-                        <label>Visit Type</label>
+-                        <select value={walkIn.type} onChange={e => setWalkIn({ ...walkIn, type: e.target.value })}>
+-                            <option>Walk-in</option>
+-                            <option>New</option>
+-                            <option>Follow-up</option>
+-                            <option>Emergency</option>
+-                        </select>
++                    <div className="form-grid">
++                        <div className="form-group">
++                            <label>Visit Type</label>
++                            <select value={walkIn.type} onChange={e => setWalkIn({ ...walkIn, type: e.target.value })}>
++                                <option>Walk-in</option>
++                                <option>New</option>
++                                <option>Follow-up</option>
++                                <option>Emergency</option>
++                            </select>
++                        </div>
++                        <div className="form-group">
++                            <label>Consultation Fee (Γé╣)</label>
++                            <input type="number" min="0" value={walkIn.fee}
++                                onChange={e => setWalkIn({ ...walkIn, fee: Number(e.target.value) })} />
++                        </div>
+                     </div>
+                     <button type="submit" className="primary-btn mt-4">
+                         <Plus size={16} /> Add to Queue as {nextToken}
+                     </button>
+                 </form>
+             </Modal>
++
++            {/* Add from Registered Patients Modal */}
++            <Modal isOpen={isRegisteredOpen} onClose={() => { setIsRegisteredOpen(false); setPatientSearch(''); }} title="Add Patient from Records" size="sm">
++                <div className="form-group">
++                    <label>Search Patient</label>
++                    <input type="text" placeholder="Search by name or mobile..."
++                        value={patientSearch} onChange={e => setPatientSearch(e.target.value)} />
++                </div>
++                <div className="patient-list-mini">
++                    {filteredRegistered.slice(0, 8).map(p => (
++                        <div key={p.id} className="patient-item-selectable" onClick={() => handleAddRegistered(p)}>
++                            <div className="text-left">
++                                <strong>{p.name}</strong>
++                                <p>{p.id} ΓÇó {p.mobile} ΓÇó {p.age}y {p.gender}</p>
++                            </div>
++                            <Plus size={18} />
++                        </div>
++                    ))}
++                    {filteredRegistered.length === 0 && (
++                        <p className="text-center text-muted py-4 text-sm">No patients found</p>
++                    )}
++                </div>
++            </Modal>
+         </div>
+     );
+ };
+ 
+-export default Appointments;
++export default Queue;
+diff --git a/src/pages/Consultation.jsx b/src/pages/Consultation.jsx
+index 3bd4096..cd52807 100644
+--- a/src/pages/Consultation.jsx
++++ b/src/pages/Consultation.jsx
+@@ -1,38 +1,63 @@
+ import { useState } from 'react';
+-import { Search, Plus, Trash2, FileText, Share2, Printer, Pill, ArrowLeft, Stethoscope, PenTool, ChevronDown, ChevronUp } from 'lucide-react';
++import {
++    Search, Plus, Trash2, FileText, Share2, Printer, Pill, ArrowLeft, Stethoscope,
++    PenTool, ChevronDown, ChevronUp, Activity, Heart, Thermometer, Scale,
++    TestTubes, Send, CheckCircle2, Syringe
++} from 'lucide-react';
+ import StylusPad from '../components/StylusPad';
+ import usePatients from '../hooks/usePatients';
++import useQueue from '../hooks/useAppointments';
++import useDispensary from '../hooks/useDispensary';
+ import PageHeader from '../components/PageHeader';
+ import SearchBar from '../components/SearchBar';
+ import EmptyState from '../components/EmptyState';
+ import { showToast } from '../components/Toast';
+-import { downloadPrescription } from '../utils/pdfUtils';
++import { downloadPrescription, downloadReferralSlip } from '../utils/pdfUtils';
+ import { useAuth } from '../context/AuthContext';
+ 
++const LAB_TESTS = [
++    'CBC (Complete Blood Count)', 'Blood Sugar (Fasting)', 'Blood Sugar (PP)',
++    'HbA1c', 'Lipid Profile', 'Kidney Function Test', 'Liver Function Test',
++    'Thyroid Profile (T3/T4/TSH)', 'Urine Routine', 'Uric Acid',
++    'Dengue NS1', 'Malaria (MP)', 'Widal Test', 'CRP',
++    'Chest X-Ray', 'ECG', 'Ultrasound Abdomen', 'MRI', 'CT Scan',
++    'Pulmonary Function Test', 'Vitamin D', 'Vitamin B12', 'Iron Studies'
++];
++
+ const Consultation = () => {
+     const { user } = useAuth();
+-    const { patients } = usePatients();
++    const { patients, addVisit } = usePatients();
++    const { consultingItem, markCompleted, waitingList, callPatient } = useQueue();
++    const { addOrder } = useDispensary();
+ 
+     const [selectedPatient, setSelectedPatient] = useState(null);
+     const [searchTerm, setSearchTerm] = useState('');
+-    const [diagnosis, setDiagnosis] = useState('');
+     const [symptoms, setSymptoms] = useState('');
++    const [diagnosis, setDiagnosis] = useState('');
+     const [notes, setNotes] = useState('');
+     const [showStylusPad, setShowStylusPad] = useState(false);
+     const [prescribedMeds, setPrescribedMeds] = useState([]);
+-    const [activeMeds, setActiveMeds] = useState({ name: '', dosage: '', frequency: '1-0-1 (Twice a day)', duration: '5 days' });
++    const [selectedLabs, setSelectedLabs] = useState([]);
++    const [labSearch, setLabSearch] = useState('');
++    const [showLabPanel, setShowLabPanel] = useState(false);
++    const [vitals, setVitals] = useState({ bp: '', temp: '', pulse: '', weight: '', spo2: '' });
++    const [activeMeds, setActiveMeds] = useState({ name: '', dosage: '', frequency: '1-0-1 (Twice a day)', duration: '5 days', category: 'medication', dispenseType: 'outdoor' });
+ 
+     const filteredPatients = patients.filter(p =>
+         p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.mobile.includes(searchTerm)
+     );
+ 
++    const filteredLabs = LAB_TESTS.filter(t =>
++        t.toLowerCase().includes(labSearch.toLowerCase()) && !selectedLabs.includes(t)
++    );
++
+     const addMedicine = () => {
+         if (!activeMeds.name) {
+             showToast('Please enter medicine name', 'error');
+             return;
+         }
+         setPrescribedMeds([...prescribedMeds, { ...activeMeds, id: Date.now() }]);
+-        setActiveMeds({ name: '', dosage: '', frequency: '1-0-1 (Twice a day)', duration: '5 days' });
++        setActiveMeds({ name: '', dosage: '', frequency: '1-0-1 (Twice a day)', duration: '5 days', category: 'medication', dispenseType: 'outdoor' });
+         showToast(`${activeMeds.name} added to prescription`, 'success');
+     };
+ 
+@@ -40,6 +65,14 @@ const Consultation = () => {
+         setPrescribedMeds(prescribedMeds.filter(m => m.id !== id));
+     };
+ 
++    const toggleLab = (labName) => {
++        if (selectedLabs.includes(labName)) {
++            setSelectedLabs(selectedLabs.filter(l => l !== labName));
++        } else {
++            setSelectedLabs([...selectedLabs, labName]);
++        }
++    };
++
+     const handleGeneratePDF = () => {
+         if (!selectedPatient) return;
+         if (prescribedMeds.length === 0) {
+@@ -48,31 +81,148 @@ const Consultation = () => {
+         }
+         downloadPrescription({
+             clinic: {
+-                name: 'SmartClinic',
+-                doctor: user?.name || 'Dr. Sharma',
+-                address: 'MG Road, Mumbai',
+-                phone: '+91 98765 43210'
++                name: user?.clinicName || 'SmartClinic',
++                doctor: user?.name || 'Dr. Payal Patel',
++                address: user?.clinicAddress || 'MG Road, Mumbai',
++                phone: user?.clinicPhone || '+91 98765 43210'
+             },
+             patient: selectedPatient,
+             symptoms,
+             diagnosis,
+-            medicines: prescribedMeds
++            medicines: prescribedMeds,
++            vitals,
++            labReferrals: selectedLabs,
+         });
+         showToast('Prescription PDF generated!', 'success');
+     };
+ 
++    const handleGenerateReferral = () => {
++        if (!selectedPatient) return;
++        if (selectedLabs.length === 0) {
++            showToast('Select at least one lab test', 'error');
++            return;
++        }
++        downloadReferralSlip({
++            clinic: {
++                name: user?.clinicName || 'SmartClinic',
++                doctor: user?.name || 'Dr. Payal Patel',
++                address: user?.clinicAddress || 'MG Road, Mumbai',
++                phone: user?.clinicPhone || '+91 98765 43210'
++            },
++            patient: selectedPatient,
++            diagnosis,
++            tests: selectedLabs,
++        });
++        showToast('Referral slip generated!', 'success');
++    };
++
++    const handleSaveAndComplete = () => {
++        if (!selectedPatient) return;
++
++        // Save the visit to EMR
++        const visitData = {
++            date: new Date().toISOString().split('T')[0],
++            doctor: user?.name || 'Dr. Payal Patel',
++            symptoms,
++            diagnosis,
++            vitals: { ...vitals },
++            medicines: prescribedMeds.map(m => ({ name: m.name, dosage: m.dosage, frequency: m.frequency, duration: m.duration })),
++            labReferrals: [...selectedLabs],
++            notes,
++        };
++        addVisit(selectedPatient.id, visitData);
++
++        // Mark consulting patient as completed in queue if applicable
++        if (consultingItem && consultingItem.patientId === selectedPatient.id) {
++            markCompleted(consultingItem.token);
++        }
++
++        showToast(`Visit saved to ${selectedPatient.name}'s EMR`, 'success');
++
++        // Auto-create dispensary orders
++        if (prescribedMeds.length > 0) {
++            const indoorItems = prescribedMeds.filter(m => m.dispenseType === 'indoor');
++            const outdoorItems = prescribedMeds.filter(m => m.dispenseType === 'outdoor');
++
++            if (indoorItems.length > 0) {
++                addOrder({
++                    patientId: selectedPatient.id,
++                    patientName: selectedPatient.name,
++                    doctor: user?.name || 'Dr. Payal Patel',
++                    type: 'indoor',
++                    items: indoorItems.map(m => ({
++                        category: m.category || 'medication',
++                        name: `${m.name} ${m.dosage}`,
++                        dosage: m.frequency,
++                        duration: m.duration,
++                        quantity: 1,
++                        dispensed: false,
++                    })),
++                    notes: notes,
++                });
++                showToast(`${indoorItems.length} items sent to Indoor Dispensary`, 'info');
++            }
++
++            if (outdoorItems.length > 0) {
++                addOrder({
++                    patientId: selectedPatient.id,
++                    patientName: selectedPatient.name,
++                    doctor: user?.name || 'Dr. Payal Patel',
++                    type: 'outdoor',
++                    items: outdoorItems.map(m => ({
++                        category: m.category || 'medication',
++                        name: `${m.name} ${m.dosage}`,
++                        dosage: m.frequency,
++                        duration: m.duration,
++                        quantity: 1,
++                        dispensed: false,
++                    })),
++                    notes: '',
++                });
++                showToast(`${outdoorItems.length} items sent to Outdoor Dispensary`, 'info');
++            }
++        }
++
++        resetConsultation();
++    };
++
+     const resetConsultation = () => {
+         setSelectedPatient(null);
+         setSymptoms('');
+         setDiagnosis('');
+         setNotes('');
+         setPrescribedMeds([]);
++        setSelectedLabs([]);
++        setLabSearch('');
++        setShowLabPanel(false);
++        setVitals({ bp: '', temp: '', pulse: '', weight: '', spo2: '' });
+         setSearchTerm('');
+     };
+ 
++    // Auto-select the currently consulting patient
++    const selectFromQueue = () => {
++        if (consultingItem?.patientId) {
++            const p = patients.find(pt => pt.id === consultingItem.patientId);
++            if (p) {
++                setSelectedPatient(p);
++                return;
++            }
++        }
++        // If no registered patient found, create a temporary one
++        if (consultingItem) {
++            setSelectedPatient({
++                id: consultingItem.patientId || `WALK-${consultingItem.token}`,
++                name: consultingItem.name,
++                age: '-',
++                gender: '-',
++                mobile: consultingItem.mobile,
++            });
++        }
++    };
++
+     return (
+         <div className="animate-fade-in">
+-            <PageHeader title="Digital Consultation" subtitle="Create digital prescriptions and referral slips" />
++            <PageHeader title="Digital Consultation" subtitle="Examine, prescribe, and generate lab referrals" />
+ 
+             {!selectedPatient ? (
+                 <div className="selection-screen glass">
+@@ -80,19 +230,56 @@ const Consultation = () => {
+                         <Stethoscope size={36} />
+                     </div>
+                     <h2>Select Patient to Begin</h2>
+-                    <p className="text-muted text-sm mb-6">Search and select a registered patient to start the consultation</p>
++                    <p className="text-muted text-sm mb-6">Choose the currently consulting patient or search from records</p>
+ 
+-                    <SearchBar
+-                        value={searchTerm}
+-                        onChange={setSearchTerm}
+-                        placeholder="Search by name or mobile..."
+-                    />
++                    {/* Quick selection from queue */}
++                    {consultingItem && (
++                        <div className="consulting-highlight glass mb-6" onClick={selectFromQueue} style={{ cursor: 'pointer' }}>
++                            <div className="flex items-center gap-3">
++                                <div className="token-mini" style={{ background: 'var(--emerald)', color: 'white', border: 'none' }}>
++                                    {consultingItem.token}
++                                </div>
++                                <div className="text-left">
++                                    <p className="font-bold">{consultingItem.name}</p>
++                                    <p className="text-xs text-muted">Currently in consultation</p>
++                                </div>
++                            </div>
++                            <span className="status-badge status-active">Select</span>
++                        </div>
++                    )}
+ 
+-                    {filteredPatients.length === 0 ? (
+-                        <p className="text-muted py-4">No patients found. Register patients first.</p>
+-                    ) : (
++                    {/* Waiting patients */}
++                    {waitingList.length > 0 && (
++                        <div className="mb-4">
++                            <h4 className="text-sm font-bold text-muted mb-2">Waiting in Queue:</h4>
++                            <div className="patient-list-mini">
++                                {waitingList.slice(0, 4).map(item => {
++                                    const registered = patients.find(p => p.id === item.patientId);
++                                    return (
++                                        <div key={item.token} className="patient-item-selectable" onClick={() => {
++                                            if (registered) {
++                                                setSelectedPatient(registered);
++                                            } else {
++                                                setSelectedPatient({ id: item.patientId || `WALK-${item.token}`, name: item.name, age: '-', gender: '-', mobile: item.mobile });
++                                            }
++                                        }}>
++                                            <div className="text-left">
++                                                <strong>{item.token} ΓÇö {item.name}</strong>
++                                                <p>{item.type} ΓÇó {item.time}</p>
++                                            </div>
++                                            <Stethoscope size={16} />
++                                        </div>
++                                    );
++                                })}
++                            </div>
++                        </div>
++                    )}
++
++                    <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder="Or search by name or mobile..." />
++
++                    {searchTerm && (
+                         <div className="patient-list-mini">
+-                            {filteredPatients.slice(0, 8).map(p => (
++                            {filteredPatients.slice(0, 6).map(p => (
+                                 <div key={p.id} className="patient-item-selectable" onClick={() => setSelectedPatient(p)}>
+                                     <div className="text-left">
+                                         <strong>{p.name}</strong>
+@@ -101,67 +288,170 @@ const Consultation = () => {
+                                     <Plus size={18} />
+                                 </div>
+                             ))}
++                            {filteredPatients.length === 0 && searchTerm && (
++                                <p className="text-muted py-4">No patients found.</p>
++                            )}
+                         </div>
+                     )}
+                 </div>
+             ) : (
+                 <div className="consultation-interface">
+-                    {/* Left - Examination */}
++                    {/* Left ΓÇö Examination */}
+                     <div className="exam-section glass">
+-                        <div className="section-header mb-6">
++                        <div className="section-header mb-4">
+                             <span className="badge">{selectedPatient.name} ({selectedPatient.id})</span>
+                             <button className="secondary-btn" onClick={resetConsultation}>
+                                 <ArrowLeft size={14} /> Change
+                             </button>
+                         </div>
+ 
+-                        <div className="flex items-center gap-3 p-3 bg-background rounded-lg mb-6">
++                        {/* Patient Info Bar */}
++                        <div className="flex items-center gap-3 p-3 bg-background rounded-lg mb-4">
+                             <div className="patient-avatar" style={{ width: 40, height: 40, fontSize: '0.9rem' }}>
+                                 {selectedPatient.name.charAt(0)}
+                             </div>
+-                            <div>
++                            <div style={{ flex: 1 }}>
+                                 <p className="font-bold text-sm">{selectedPatient.name}</p>
+                                 <p className="text-xs text-muted">{selectedPatient.age}y, {selectedPatient.gender} ΓÇó {selectedPatient.mobile}</p>
+                             </div>
++                            {selectedPatient.allergies && selectedPatient.allergies !== 'None' && (
++                                <span className="tag" style={{ background: 'var(--accent-light)', color: 'var(--accent)', fontSize: '0.7rem' }}>
++                                    ΓÜá {selectedPatient.allergies}
++                                </span>
++                            )}
++                        </div>
++
++                        {/* ΓòÉΓòÉΓòÉ PATIENT OVERVIEW ΓÇö What was told last time ΓòÉΓòÉΓòÉ */}
++                        {selectedPatient.visits?.length > 0 && (
++                            <div className="mb-4" style={{ animation: 'fadeInUp 0.3s ease' }}>
++                                {/* Last Visit Instructions Card */}
++                                <div className="last-instructions-card">
++                                    <h5>≡ƒôï LAST VISIT OVERVIEW ΓÇö {selectedPatient.visits[0].date} (by {selectedPatient.visits[0].doctor})</h5>
++                                    <div className="patient-overview-grid">
++                                        <div className="overview-card" style={{ borderLeftColor: 'var(--accent)' }}>
++                                            <h5>Chief Complaints</h5>
++                                            <p>{selectedPatient.visits[0].symptoms || 'N/A'}</p>
++                                        </div>
++                                        <div className="overview-card" style={{ borderLeftColor: 'var(--emerald)' }}>
++                                            <h5>Diagnosis</h5>
++                                            <p>{selectedPatient.visits[0].diagnosis || 'N/A'}</p>
++                                        </div>
++                                    </div>
++                                    {selectedPatient.visits[0].medicines?.length > 0 && (
++                                        <div className="overview-card mb-2" style={{ borderLeftColor: 'var(--primary)' }}>
++                                            <h5>≡ƒÆè Medications Given</h5>
++                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
++                                                {selectedPatient.visits[0].medicines.map((m, i) => (
++                                                    <span key={i} className="tag" style={{ fontSize: '0.75rem' }}>
++                                                        {m.name} {m.dosage} ({m.frequency}, {m.duration})
++                                                    </span>
++                                                ))}
++                                            </div>
++                                        </div>
++                                    )}
++                                    {selectedPatient.visits[0].labReferrals?.length > 0 && (
++                                        <div className="overview-card mb-2" style={{ borderLeftColor: 'var(--secondary)' }}>
++                                            <h5>≡ƒº¬ Lab Tests Ordered</h5>
++                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
++                                                {selectedPatient.visits[0].labReferrals.map((lab, i) => (
++                                                    <span key={i} className="tag" style={{ background: 'var(--secondary-light)', color: '#0c4a6e', fontSize: '0.75rem' }}>
++                                                        {lab}
++                                                    </span>
++                                                ))}
++                                            </div>
++                                        </div>
++                                    )}
++                                    {selectedPatient.visits[0].notes && (
++                                        <div className="overview-card" style={{ borderLeftColor: '#f59e0b', background: 'var(--amber-light)' }}>
++                                            <h5>≡ƒô¥ Follow-up Instructions (What was told to patient)</h5>
++                                            <p style={{ color: '#92400e', fontStyle: 'italic' }}>{selectedPatient.visits[0].notes}</p>
++                                        </div>
++                                    )}
++                                </div>
++
++                                {/* Previous Visits Timeline (if more than 1 visit) */}
++                                {selectedPatient.visits.length > 1 && (
++                                    <details className="p-3 bg-background rounded-lg" style={{ cursor: 'pointer' }}>
++                                        <summary className="text-xs font-bold text-muted" style={{ listStyle: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
++                                            ≡ƒôÜ View all {selectedPatient.visits.length} past visits
++                                        </summary>
++                                        <div className="visit-timeline mt-3">
++                                            {selectedPatient.visits.slice(1).map((visit, idx) => (
++                                                <div key={idx} className="timeline-item">
++                                                    <p className="text-xs text-muted font-semibold">{visit.date} ΓÇö {visit.doctor}</p>
++                                                    <p className="text-sm font-bold">{visit.diagnosis}</p>
++                                                    <p className="text-xs text-muted">
++                                                        Rx: {visit.medicines?.map(m => m.name).join(', ') || 'None'}
++                                                    </p>
++                                                    {visit.notes && (
++                                                        <p className="text-xs" style={{ fontStyle: 'italic', color: 'var(--amber)' }}>
++                                                            ≡ƒÆ¼ {visit.notes}
++                                                        </p>
++                                                    )}
++                                                </div>
++                                            ))}
++                                        </div>
++                                    </details>
++                                )}
++                            </div>
++                        )}
++
++                        {/* Vitals Section */}
++                        <h4 className="font-bold text-sm mb-3 flex items-center gap-2">
++                            <Heart size={14} className="text-accent" /> Vitals
++                        </h4>
++                        <div className="vitals-grid mb-4">
++                            <div className="vital-input">
++                                <label>BP (mmHg)</label>
++                                <input type="text" placeholder="120/80" value={vitals.bp}
++                                    onChange={e => setVitals({ ...vitals, bp: e.target.value })} />
++                            </div>
++                            <div className="vital-input">
++                                <label>Temp (┬░F)</label>
++                                <input type="text" placeholder="98.6" value={vitals.temp}
++                                    onChange={e => setVitals({ ...vitals, temp: e.target.value })} />
++                            </div>
++                            <div className="vital-input">
++                                <label>Pulse (bpm)</label>
++                                <input type="text" placeholder="72" value={vitals.pulse}
++                                    onChange={e => setVitals({ ...vitals, pulse: e.target.value })} />
++                            </div>
++                            <div className="vital-input">
++                                <label>SpOΓéé (%)</label>
++                                <input type="text" placeholder="98" value={vitals.spo2}
++                                    onChange={e => setVitals({ ...vitals, spo2: e.target.value })} />
++                            </div>
++                            <div className="vital-input">
++                                <label>Weight (kg)</label>
++                                <input type="text" placeholder="65" value={vitals.weight}
++                                    onChange={e => setVitals({ ...vitals, weight: e.target.value })} />
++                            </div>
+                         </div>
+ 
++                        {/* Symptoms */}
+                         <div className="form-group">
+-                            <label>Chief Symptoms</label>
+-                            <textarea
+-                                rows="3"
+-                                placeholder="Enter symptoms (e.g. Fever for 3 days, dry cough, headache...)"
+-                                value={symptoms}
+-                                onChange={e => setSymptoms(e.target.value)}
+-                            ></textarea>
++                            <label>Chief Complaints / Symptoms</label>
++                            <textarea rows="3" placeholder="Enter symptoms (e.g. Fever for 3 days, dry cough, headache...)"
++                                value={symptoms} onChange={e => setSymptoms(e.target.value)}></textarea>
+                         </div>
+ 
++                        {/* Diagnosis */}
+                         <div className="form-group">
+                             <label>Diagnosis</label>
+-                            <textarea
+-                                rows="3"
+-                                placeholder="Enter clinical diagnosis..."
+-                                value={diagnosis}
+-                                onChange={e => setDiagnosis(e.target.value)}
+-                            ></textarea>
++                            <textarea rows="2" placeholder="Enter clinical diagnosis..."
++                                value={diagnosis} onChange={e => setDiagnosis(e.target.value)}></textarea>
+                         </div>
+ 
++                        {/* Doctor's Notes */}
+                         <div className="form-group">
+                             <label>Doctor's Notes (Internal)</label>
+-                            <textarea
+-                                rows="2"
+-                                placeholder="Private notes ΓÇö won't appear on prescription..."
+-                                value={notes}
+-                                onChange={e => setNotes(e.target.value)}
+-                            ></textarea>
++                            <textarea rows="2" placeholder="Private notes ΓÇö won't appear on prescription..."
++                                value={notes} onChange={e => setNotes(e.target.value)}></textarea>
+                         </div>
+ 
+-                        {/* Stylus Pad ΓÇö Collapsible */}
++                        {/* Stylus Pad */}
+                         <div className="stylus-section">
+-                            <button
+-                                className="stylus-toggle-btn"
+-                                onClick={() => setShowStylusPad(!showStylusPad)}
+-                                type="button"
+-                            >
++                            <button className="stylus-toggle-btn" onClick={() => setShowStylusPad(!showStylusPad)} type="button">
+                                 <PenTool size={15} className="text-primary" />
+                                 <span>Quick Sketch / Signature Pad</span>
+                                 {showStylusPad ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+@@ -174,8 +464,9 @@ const Consultation = () => {
+                         </div>
+                     </div>
+ 
+-                    {/* Right - Prescription */}
++                    {/* Right ΓÇö Prescription & Lab Referrals */}
+                     <div className="prescription-section glass">
++                        {/* Medications */}
+                         <h3 className="font-bold mb-4 flex items-center gap-2">
+                             <Pill size={18} className="text-primary" /> Medication & Dosage
+                         </h3>
+@@ -184,21 +475,13 @@ const Consultation = () => {
+                             <div className="grid-cols-2">
+                                 <div className="form-group">
+                                     <label>Medicine Name</label>
+-                                    <input
+-                                        type="text"
+-                                        placeholder="e.g. Paracetamol"
+-                                        value={activeMeds.name}
+-                                        onChange={e => setActiveMeds({ ...activeMeds, name: e.target.value })}
+-                                    />
++                                    <input type="text" placeholder="e.g. Paracetamol" value={activeMeds.name}
++                                        onChange={e => setActiveMeds({ ...activeMeds, name: e.target.value })} />
+                                 </div>
+                                 <div className="form-group">
+                                     <label>Dosage</label>
+-                                    <input
+-                                        type="text"
+-                                        placeholder="e.g. 500mg"
+-                                        value={activeMeds.dosage}
+-                                        onChange={e => setActiveMeds({ ...activeMeds, dosage: e.target.value })}
+-                                    />
++                                    <input type="text" placeholder="e.g. 500mg" value={activeMeds.dosage}
++                                        onChange={e => setActiveMeds({ ...activeMeds, dosage: e.target.value })} />
+                                 </div>
+                             </div>
+                             <div className="grid-cols-2">
+@@ -210,16 +493,33 @@ const Consultation = () => {
+                                         <option>0-0-1 (At night)</option>
+                                         <option>1-0-0 (Morning only)</option>
+                                         <option>As needed (SOS)</option>
++                                        <option>Stat (Now)</option>
+                                     </select>
+                                 </div>
+                                 <div className="form-group">
+                                     <label>Duration</label>
+-                                    <input
+-                                        type="text"
+-                                        placeholder="e.g. 5 days"
+-                                        value={activeMeds.duration}
+-                                        onChange={e => setActiveMeds({ ...activeMeds, duration: e.target.value })}
+-                                    />
++                                    <input type="text" placeholder="e.g. 5 days" value={activeMeds.duration}
++                                        onChange={e => setActiveMeds({ ...activeMeds, duration: e.target.value })} />
++                                </div>
++                            </div>
++                            <div className="grid-cols-2">
++                                <div className="form-group">
++                                    <label>Category</label>
++                                    <select value={activeMeds.category} onChange={e => setActiveMeds({ ...activeMeds, category: e.target.value })}>
++                                        <option value="medication">≡ƒÆè Medication / Tablet</option>
++                                        <option value="injection">≡ƒÆë Injection</option>
++                                        <option value="iv_fluid">≡ƒ⌐╕ IV Fluid</option>
++                                        <option value="nebulization">≡ƒî¼∩╕Å Nebulization</option>
++                                        <option value="dressing">≡ƒ⌐╣ Dressing / Procedure</option>
++                                        <option value="other">≡ƒôï Other</option>
++                                    </select>
++                                </div>
++                                <div className="form-group">
++                                    <label>Dispense To</label>
++                                    <select value={activeMeds.dispenseType} onChange={e => setActiveMeds({ ...activeMeds, dispenseType: e.target.value })}>
++                                        <option value="outdoor">≡ƒÅá Outdoor (Take Home)</option>
++                                        <option value="indoor">≡ƒÅÑ Indoor (In-Clinic)</option>
++                                    </select>
+                                 </div>
+                             </div>
+                             <button className="primary-btn-sm w-full" onClick={addMedicine}>
+@@ -227,19 +527,24 @@ const Consultation = () => {
+                             </button>
+                         </div>
+ 
+-                        <div className="prescribed-list mt-6" style={{ flex: 1, overflowY: 'auto' }}>
++                        <div className="prescribed-list mt-4" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                             {prescribedMeds.length === 0 ? (
+-                                <EmptyState
+-                                    icon={Pill}
+-                                    title="No medicines added"
+-                                    subtitle="Add medicines above to build the prescription"
+-                                />
++                                <EmptyState icon={Pill} title="No medicines added" subtitle="Add medicines above to build the prescription" />
+                             ) : (
+                                 prescribedMeds.map((med) => (
+                                     <div key={med.id} className="med-pill">
+                                         <div>
+                                             <strong>{med.name} {med.dosage}</strong>
+-                                            <p>{med.frequency} ΓÇó {med.duration}</p>
++                                            <p>{med.frequency} ΓÇó {med.duration}
++                                                <span className="tag" style={{
++                                                    marginLeft: '0.35rem',
++                                                    fontSize: '0.65rem',
++                                                    background: med.dispenseType === 'indoor' ? 'var(--secondary-light)' : 'var(--emerald-light)',
++                                                    color: med.dispenseType === 'indoor' ? '#0c4a6e' : '#065f46',
++                                                }}>
++                                                    {med.dispenseType === 'indoor' ? '≡ƒÅÑ Indoor' : '≡ƒÅá Outdoor'}
++                                                </span>
++                                            </p>
+                                         </div>
+                                         <button onClick={() => removeMed(med.id)} className="icon-btn danger" style={{ width: 32, height: 32 }}>
+                                             <Trash2 size={14} />
+@@ -249,9 +554,57 @@ const Consultation = () => {
+                             )}
+                         </div>
+ 
+-                        <div className="action-footer">
+-                            <button className="primary-btn flex-1" onClick={handleGeneratePDF}>
+-                                <FileText size={16} /> Generate PDF
++                        {/* Lab / Radiology Referrals */}
++                        <div className="lab-referral-section mt-6">
++                            <button className="stylus-toggle-btn" onClick={() => setShowLabPanel(!showLabPanel)} type="button">
++                                <TestTubes size={15} className="text-secondary" />
++                                <span>Lab / Radiology Referrals ({selectedLabs.length})</span>
++                                {showLabPanel ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
++                            </button>
++
++                            {showLabPanel && (
++                                <div className="lab-panel mt-3" style={{ animation: 'fadeInUp 0.3s ease' }}>
++                                    <input type="text" placeholder="Search tests..." className="lab-search"
++                                        value={labSearch} onChange={e => setLabSearch(e.target.value)} />
++
++                                    {/* Selected Labs */}
++                                    {selectedLabs.length > 0 && (
++                                        <div className="selected-labs mb-3">
++                                            {selectedLabs.map((lab, i) => (
++                                                <span key={i} className="lab-tag selected" onClick={() => toggleLab(lab)}>
++                                                    {lab} ├ù
++                                                </span>
++                                            ))}
++                                        </div>
++                                    )}
++
++                                    {/* Available Labs */}
++                                    <div className="lab-options">
++                                        {filteredLabs.slice(0, 10).map((lab, i) => (
++                                            <span key={i} className="lab-tag" onClick={() => toggleLab(lab)}>
++                                                + {lab}
++                                            </span>
++                                        ))}
++                                    </div>
++
++                                    {selectedLabs.length > 0 && (
++                                        <button className="secondary-btn mt-3 w-full" onClick={handleGenerateReferral}>
++                                            <Send size={14} /> Generate Referral Slip
++                                        </button>
++                                    )}
++                                </div>
++                            )}
++                        </div>
++
++                        {/* Action Footer */}
++                        <div className="action-footer mt-4">
++                            <button className="primary-btn flex-1" onClick={handleSaveAndComplete}>
++                                <CheckCircle2 size={16} /> Save & Complete Visit
++                            </button>
++                        </div>
++                        <div className="flex gap-2 mt-3">
++                            <button className="secondary-btn flex-1" onClick={handleGeneratePDF}>
++                                <FileText size={14} /> Prescription PDF
+                             </button>
+                             <button className="icon-btn primary" title="Print" style={{ width: 42, height: 42 }}>
+                                 <Printer size={18} />
+diff --git a/src/pages/Dashboard.jsx b/src/pages/Dashboard.jsx
+index 50e8363..7f6b6d0 100644
+--- a/src/pages/Dashboard.jsx
++++ b/src/pages/Dashboard.jsx
+@@ -1,14 +1,18 @@
+-import { Users, Calendar, Wallet, ClipboardList, Play, Activity, TrendingUp, Clock } from 'lucide-react';
++import {
++    Users, Calendar, Wallet, ClipboardList, Play, Activity, TrendingUp, Clock,
++    UserPlus, Stethoscope, Receipt, ArrowRight
++} from 'lucide-react';
++import { Link } from 'react-router-dom';
+ import usePatients from '../hooks/usePatients';
+-import useAppointments from '../hooks/useAppointments';
++import useQueue from '../hooks/useAppointments';
++import { useAuth } from '../context/AuthContext';
+ import PageHeader from '../components/PageHeader';
+ import StatCard from '../components/StatCard';
+ 
+ const Dashboard = () => {
++    const { user, isDoctor, isAssistant } = useAuth();
+     const { totalPatients } = usePatients();
+-    const { waitingCount, completedCount, consultingItem, queue } = useAppointments();
+-
+-    const waitingQueue = queue.filter(q => q.status === 'Waiting').slice(0, 4);
++    const { waitingCount, completedCount, consultingItem, queue, todayRevenue, waitingList } = useQueue();
+ 
+     const activities = [
+         { title: 'Prescription Generated', meta: 'Rahul Verma ΓÇó 10 mins ago', active: true },
+@@ -19,106 +23,218 @@ const Dashboard = () => {
+ 
+     return (
+         <div className="animate-fade-in">
+-            <PageHeader title="Dashboard Overview" subtitle="Your clinic at a glance">
++            <PageHeader
++                title={isDoctor ? 'Doctor Dashboard' : 'Reception Dashboard'}
++                subtitle={`Welcome back, ${user?.name || 'User'}`}
++            >
+                 <div className="date-display">
+                     {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
+                 </div>
+             </PageHeader>
+ 
+-            <div className="stats-grid stagger-children">
+-                <StatCard icon={Users} label="Active Patients" value={totalPatients.toLocaleString()} variant="luxury" />
+-                <StatCard icon={Calendar} label="Today's Queue" value={queue.length} />
+-                <StatCard icon={Wallet} label="Revenue Today" value="Γé╣12,400" />
+-                <StatCard icon={ClipboardList} label="Pending Reports" value="6" />
+-            </div>
+-
+-            <div className="dashboard-grid mt-8">
+-                {/* Next in Queue Widget */}
+-                <div className="widget glass">
+-                    <div className="widget-header">
+-                        <h3 className="flex items-center gap-2">
+-                            <Clock size={16} className="text-primary" /> Next in Queue
+-                        </h3>
+-                        <span className="tag">{waitingCount} waiting</span>
++            {/* ΓöÇΓöÇΓöÇ DOCTOR DASHBOARD ΓöÇΓöÇΓöÇ */}
++            {isDoctor && (
++                <>
++                    <div className="stats-grid stagger-children">
++                        <StatCard icon={Users} label="Patients Today" value={queue.length} variant="luxury" />
++                        <StatCard icon={Stethoscope} label="Consulting" value={consultingItem ? 1 : 0} />
++                        <StatCard icon={ClipboardList} label="Completed" value={completedCount} />
++                        <StatCard icon={Wallet} label="Revenue Today" value={`Γé╣${todayRevenue.toLocaleString()}`} />
+                     </div>
+ 
+-                    {consultingItem && (
+-                        <div className="mini-queue-item" style={{ background: 'var(--emerald-light)', marginBottom: '0.75rem' }}>
+-                            <div className="flex items-center gap-3">
+-                                <div className="token-mini" style={{ background: 'var(--emerald)', color: 'white', border: 'none' }}>
+-                                    {consultingItem.token}
++                    <div className="dashboard-grid mt-8">
++                        {/* Currently Consulting */}
++                        <div className="widget glass">
++                            <div className="widget-header">
++                                <h3 className="flex items-center gap-2">
++                                    <Stethoscope size={16} className="text-primary" /> Current Patient
++                                </h3>
++                                <Link to="/consultations" className="tag" style={{ cursor: 'pointer' }}>
++                                    Open Consultation ΓåÆ
++                                </Link>
++                            </div>
++                            {consultingItem ? (
++                                <div className="mini-queue-item" style={{ background: 'var(--emerald-light)' }}>
++                                    <div className="flex items-center gap-3">
++                                        <div className="token-mini" style={{ background: 'var(--emerald)', color: 'white', border: 'none' }}>
++                                            {consultingItem.token}
++                                        </div>
++                                        <div>
++                                            <p className="font-bold text-sm" style={{ color: 'var(--emerald)' }}>{consultingItem.name}</p>
++                                            <p className="text-xs text-muted">{consultingItem.type} ΓÇó {consultingItem.time}</p>
++                                        </div>
++                                    </div>
++                                    <span className="status-badge status-active">In Room</span>
+                                 </div>
+-                                <div>
+-                                    <p className="font-bold text-sm" style={{ color: 'var(--emerald)' }}>{consultingItem.name}</p>
+-                                    <p className="text-xs text-muted">Currently consulting</p>
++                            ) : (
++                                <p className="text-center text-muted py-6 text-sm">No patient currently in consultation</p>
++                            )}
++
++                            <h4 className="font-bold text-sm mt-4 mb-2 text-muted">Up Next ({waitingCount})</h4>
++                            {waitingList.slice(0, 3).map((item) => (
++                                <div key={item.token} className="mini-queue-item">
++                                    <div className="flex items-center gap-3">
++                                        <div className="token-mini">{item.token}</div>
++                                        <div>
++                                            <p className="font-bold text-sm">{item.name}</p>
++                                            <p className="text-xs text-muted">{item.type} ΓÇó {item.time}</p>
++                                        </div>
++                                    </div>
+                                 </div>
+-                            </div>
+-                            <span className="status-badge status-active">Active</span>
++                            ))}
++                            {waitingList.length === 0 && (
++                                <p className="text-center text-muted py-2 text-sm">Queue is empty</p>
++                            )}
+                         </div>
+-                    )}
+ 
+-                    {waitingQueue.length === 0 ? (
+-                        <p className="text-center text-muted py-4 text-sm">No patients waiting</p>
+-                    ) : (
+-                        waitingQueue.map((item) => (
+-                            <div key={item.token} className="mini-queue-item">
+-                                <div className="flex items-center gap-3">
+-                                    <div className="token-mini">{item.token}</div>
+-                                    <div>
+-                                        <p className="font-bold text-sm">{item.name}</p>
+-                                        <p className="text-xs text-muted">Awaiting ΓÇó {item.time}</p>
++                        {/* Recent Activity */}
++                        <div className="widget glass">
++                            <div className="widget-header">
++                                <h3 className="flex items-center gap-2">
++                                    <Activity size={16} className="text-primary" /> Recent Activity
++                                </h3>
++                            </div>
++                            <div className="activity-timeline">
++                                {activities.map((item, i) => (
++                                    <div key={i} className={`activity-item ${item.active ? 'active' : ''}`}>
++                                        <p className="activity-title">{item.title}</p>
++                                        <p className="activity-meta">{item.meta}</p>
+                                     </div>
+-                                </div>
+-                                <button className="icon-btn primary" style={{ width: 28, height: 28 }}>
+-                                    <Play size={12} fill="currentColor" />
+-                                </button>
++                                ))}
+                             </div>
+-                        ))
+-                    )}
+-                </div>
++                        </div>
++                    </div>
+ 
+-                {/* Recent Activities Widget */}
+-                <div className="widget glass">
+-                    <div className="widget-header">
+-                        <h3 className="flex items-center gap-2">
+-                            <Activity size={16} className="text-primary" /> Recent Activity
+-                        </h3>
++                    <div className="grid-cols-3 mt-6 stagger-children">
++                        <div className="glass p-4 rounded-2xl">
++                            <p className="text-xs text-muted font-semibold">TOTAL PATIENTS</p>
++                            <p className="font-extrabold text-2xl mt-1" style={{ color: 'var(--primary)' }}>{totalPatients}</p>
++                            <p className="text-xs text-muted">registered</p>
++                        </div>
++                        <div className="glass p-4 rounded-2xl">
++                            <p className="text-xs text-muted font-semibold">AVERAGE WAIT</p>
++                            <p className="font-extrabold text-2xl mt-1">~12 min</p>
++                            <p className="text-xs text-muted">per patient</p>
++                        </div>
++                        <div className="glass p-4 rounded-2xl">
++                            <p className="text-xs text-muted font-semibold">THIS WEEK</p>
++                            <div className="flex items-center gap-2 mt-1">
++                                <p className="font-extrabold text-2xl">Γé╣36.8K</p>
++                                <span className="flex items-center gap-1 text-xs font-bold" style={{ color: 'var(--emerald)' }}>
++                                    <TrendingUp size={12} /> +8%
++                                </span>
++                            </div>
++                            <p className="text-xs text-muted">revenue collected</p>
++                        </div>
++                    </div>
++                </>
++            )}
++
++            {/* ΓöÇΓöÇΓöÇ ASSISTANT / RECEPTIONIST DASHBOARD ΓöÇΓöÇΓöÇ */}
++            {isAssistant && (
++                <>
++                    <div className="stats-grid stagger-children">
++                        <StatCard icon={Clock} label="Waiting" value={waitingCount} variant="luxury" />
++                        <StatCard icon={Stethoscope} label="In Consultation" value={consultingItem ? 1 : 0} />
++                        <StatCard icon={ClipboardList} label="Completed" value={completedCount} />
++                        <StatCard icon={Users} label="Total Today" value={queue.length} />
+                     </div>
+ 
+-                    <div className="activity-timeline">
+-                        {activities.map((item, i) => (
+-                            <div key={i} className={`activity-item ${item.active ? 'active' : ''}`}>
+-                                <p className="activity-title">{item.title}</p>
+-                                <p className="activity-meta">{item.meta}</p>
++                    {/* Quick Actions */}
++                    <div className="grid-cols-3 mb-8 stagger-children">
++                        <Link to="/patients" className="quick-action-card glass">
++                            <div className="quick-action-icon" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>
++                                <UserPlus size={24} />
++                            </div>
++                            <h4>Register Patient</h4>
++                            <p className="text-xs text-muted">Add new patient to records</p>
++                        </Link>
++                        <Link to="/queue" className="quick-action-card glass">
++                            <div className="quick-action-icon" style={{ background: 'var(--emerald-light)', color: 'var(--emerald)' }}>
++                                <Calendar size={24} />
+                             </div>
+-                        ))}
++                            <h4>Manage Queue</h4>
++                            <p className="text-xs text-muted">Add to queue, generate tokens</p>
++                        </Link>
++                        <Link to="/billing" className="quick-action-card glass">
++                            <div className="quick-action-icon" style={{ background: 'var(--amber-light)', color: 'var(--amber)' }}>
++                                <Receipt size={24} />
++                            </div>
++                            <h4>Collect Fee</h4>
++                            <p className="text-xs text-muted">Generate consultation receipt</p>
++                        </Link>
+                     </div>
+-                </div>
+-            </div>
+ 
+-            {/* Quick Stats Row */}
+-            <div className="grid-cols-3 mt-6 stagger-children">
+-                <div className="glass p-4 rounded-2xl">
+-                    <p className="text-xs text-muted font-semibold">COMPLETED TODAY</p>
+-                    <p className="font-extrabold text-2xl mt-1" style={{ color: 'var(--emerald)' }}>{completedCount}</p>
+-                    <p className="text-xs text-muted">consultations</p>
+-                </div>
+-                <div className="glass p-4 rounded-2xl">
+-                    <p className="text-xs text-muted font-semibold">AVERAGE WAIT</p>
+-                    <p className="font-extrabold text-2xl mt-1">~12 min</p>
+-                    <p className="text-xs text-muted">per patient</p>
+-                </div>
+-                <div className="glass p-4 rounded-2xl">
+-                    <p className="text-xs text-muted font-semibold">THIS WEEK</p>
+-                    <div className="flex items-center gap-2 mt-1">
+-                        <p className="font-extrabold text-2xl">Γé╣36.8K</p>
+-                        <span className="flex items-center gap-1 text-xs font-bold" style={{ color: 'var(--emerald)' }}>
+-                            <TrendingUp size={12} /> +8%
+-                        </span>
++                    <div className="dashboard-grid">
++                        {/* Live Queue */}
++                        <div className="widget glass">
++                            <div className="widget-header">
++                                <h3 className="flex items-center gap-2">
++                                    <Clock size={16} className="text-primary" /> Live Queue
++                                </h3>
++                                <Link to="/queue" className="tag" style={{ cursor: 'pointer' }}>
++                                    View All ΓåÆ
++                                </Link>
++                            </div>
++
++                            {consultingItem && (
++                                <div className="mini-queue-item" style={{ background: 'var(--emerald-light)', marginBottom: '0.75rem' }}>
++                                    <div className="flex items-center gap-3">
++                                        <div className="token-mini" style={{ background: 'var(--emerald)', color: 'white', border: 'none' }}>
++                                            {consultingItem.token}
++                                        </div>
++                                        <div>
++                                            <p className="font-bold text-sm" style={{ color: 'var(--emerald)' }}>{consultingItem.name}</p>
++                                            <p className="text-xs text-muted">Currently consulting</p>
++                                        </div>
++                                    </div>
++                                    <span className="status-badge status-active">Active</span>
++                                </div>
++                            )}
++
++                            {waitingList.length === 0 ? (
++                                <p className="text-center text-muted py-4 text-sm">No patients waiting</p>
++                            ) : (
++                                waitingList.slice(0, 5).map((item) => (
++                                    <div key={item.token} className="mini-queue-item">
++                                        <div className="flex items-center gap-3">
++                                            <div className="token-mini">{item.token}</div>
++                                            <div>
++                                                <p className="font-bold text-sm">{item.name}</p>
++                                                <p className="text-xs text-muted">Awaiting ΓÇó {item.time}</p>
++                                            </div>
++                                        </div>
++                                        <Play size={14} className="text-primary" />
++                                    </div>
++                                ))
++                            )}
++                        </div>
++
++                        {/* Today's Revenue */}
++                        <div className="widget glass">
++                            <div className="widget-header">
++                                <h3 className="flex items-center gap-2">
++                                    <Wallet size={16} className="text-primary" /> Today's Collection
++                                </h3>
++                            </div>
++                            <div className="text-center py-4">
++                                <p className="text-4xl font-extrabold" style={{ color: 'var(--emerald)' }}>
++                                    Γé╣{todayRevenue.toLocaleString()}
++                                </p>
++                                <p className="text-sm text-muted mt-1">from {completedCount} completed consultations</p>
++                            </div>
++                            <div className="activity-timeline mt-4">
++                                {activities.slice(0, 3).map((item, i) => (
++                                    <div key={i} className={`activity-item ${item.active ? 'active' : ''}`}>
++                                        <p className="activity-title">{item.title}</p>
++                                        <p className="activity-meta">{item.meta}</p>
++                                    </div>
++                                ))}
++                            </div>
++                        </div>
+                     </div>
+-                    <p className="text-xs text-muted">revenue collected</p>
+-                </div>
+-            </div>
++                </>
++            )}
+         </div>
+     );
+ };
+diff --git a/src/pages/LinkedEntities.jsx b/src/pages/LinkedEntities.jsx
+index 230b1f2..75ee8bf 100644
+--- a/src/pages/LinkedEntities.jsx
++++ b/src/pages/LinkedEntities.jsx
+@@ -17,7 +17,7 @@ const AVAILABLE_STORES = [
+ ];
+ 
+ const AVAILABLE_CLINICS = [
+-    { id: 'CLINIC001', name: 'SmartClinic', doctor: 'Dr. Sharma', specialty: 'General Medicine', address: 'MG Road, Mumbai', phone: '+91 98765 43210', status: 'active' },
++    { id: 'CLINIC001', name: 'SmartClinic', doctor: 'Dr. Payal Patel', specialty: 'General Medicine', address: 'MG Road, Mumbai', phone: '+91 98765 43210', status: 'active' },
+     { id: 'CLINIC002', name: 'City Care Clinic', doctor: 'Dr. Patel', specialty: 'Pediatrics', address: 'Bandra, Mumbai', phone: '+91 87654 32109', status: 'active' },
+     { id: 'CLINIC003', name: 'Health First', doctor: 'Dr. Gupta', specialty: 'Dermatology', address: 'Juhu, Mumbai', phone: '+91 76543 21098', status: 'active' },
+ ];
+diff --git a/src/pages/Patients.jsx b/src/pages/Patients.jsx
+index b793b7e..c9908f4 100644
+--- a/src/pages/Patients.jsx
++++ b/src/pages/Patients.jsx
+@@ -1,6 +1,10 @@
+ import { useState } from 'react';
+-import { Search, Plus, User, Phone, Calendar, ArrowRight, X, Edit3, Trash2, MapPin, Heart } from 'lucide-react';
++import {
++    Search, Plus, User, Phone, Calendar, ArrowRight, X, Edit3, Trash2,
++    MapPin, Heart, FileText, Pill, Activity, Droplets, Thermometer, AlertTriangle
++} from 'lucide-react';
+ import usePatients from '../hooks/usePatients';
++import { useAuth } from '../context/AuthContext';
+ import Modal from '../components/Modal';
+ import PageHeader from '../components/PageHeader';
+ import SearchBar from '../components/SearchBar';
+@@ -8,19 +12,18 @@ import EmptyState from '../components/EmptyState';
+ import { showToast } from '../components/Toast';
+ 
+ const Patients = () => {
++    const { isDoctor, isAssistant } = useAuth();
+     const {
+-        filteredPatients,
+-        searchTerm,
+-        setSearchTerm,
+-        addPatient,
+-        deletePatient,
+-        totalPatients
++        filteredPatients, searchTerm, setSearchTerm,
++        addPatient, deletePatient, totalPatients
+     } = usePatients();
+ 
+     const [isModalOpen, setIsModalOpen] = useState(false);
+     const [selectedPatient, setSelectedPatient] = useState(null);
++    const [emrTab, setEmrTab] = useState('info'); // 'info' | 'visits'
+     const [newPatient, setNewPatient] = useState({
+-        name: '', age: '', gender: 'Male', mobile: '', address: '', history: ''
++        name: '', age: '', gender: 'Male', mobile: '', address: '',
++        bloodGroup: '', allergies: ''
+     });
+ 
+     const handleAddPatient = (e) => {
+@@ -28,7 +31,7 @@ const Patients = () => {
+         const patient = addPatient(newPatient);
+         showToast(`${patient.name} registered successfully!`, 'success');
+         setIsModalOpen(false);
+-        setNewPatient({ name: '', age: '', gender: 'Male', mobile: '', address: '', history: '' });
++        setNewPatient({ name: '', age: '', gender: 'Male', mobile: '', address: '', bloodGroup: '', allergies: '' });
+     };
+ 
+     const handleDelete = (id, name) => {
+@@ -39,13 +42,20 @@ const Patients = () => {
+         }
+     };
+ 
++    const openEMR = (patient) => {
++        setSelectedPatient(patient);
++        setEmrTab('info');
++    };
++
+     return (
+         <div className="animate-fade-in">
+             <PageHeader title="Patient Directory" subtitle={`${totalPatients} registered patients`}>
+-                <button className="primary-btn-sm" onClick={() => setIsModalOpen(true)}>
+-                    <Plus size={16} />
+-                    <span>New Patient</span>
+-                </button>
++                {isAssistant && (
++                    <button className="primary-btn-sm" onClick={() => setIsModalOpen(true)}>
++                        <Plus size={16} />
++                        <span>Register Patient</span>
++                    </button>
++                )}
+             </PageHeader>
+ 
+             <SearchBar
+@@ -60,7 +70,7 @@ const Patients = () => {
+                     title="No patients found"
+                     subtitle={searchTerm ? "Try a different search term" : "Register your first patient to get started"}
+                     action={
+-                        !searchTerm && (
++                        !searchTerm && isAssistant && (
+                             <button className="primary-btn-sm" onClick={() => setIsModalOpen(true)}>
+                                 <Plus size={16} /> Add First Patient
+                             </button>
+@@ -73,7 +83,7 @@ const Patients = () => {
+                         <div
+                             key={patient.id}
+                             className="patient-card glass"
+-                            onClick={() => setSelectedPatient(patient)}
++                            onClick={() => openEMR(patient)}
+                         >
+                             <div className="patient-avatar">
+                                 {patient.name.charAt(0)}
+@@ -84,54 +94,44 @@ const Patients = () => {
+                                 <div className="details">
+                                     <span><User size={13} /> {patient.age}y, {patient.gender}</span>
+                                     <span><Phone size={13} /> {patient.mobile}</span>
+-                                    {patient.lastVisit && (
+-                                        <span><Calendar size={13} /> Last: {patient.lastVisit}</span>
++                                    {patient.visits?.length > 0 && (
++                                        <span><Calendar size={13} /> Last: {patient.visits[0].date}</span>
+                                     )}
+                                 </div>
+                             </div>
+-                            <button className="view-btn" title="View details">
+-                                <ArrowRight size={18} />
+-                            </button>
++                            <div className="flex flex-col items-end gap-1">
++                                {patient.allergies && patient.allergies !== 'None' && (
++                                    <span className="tag" style={{ background: 'var(--accent-light)', color: 'var(--accent)', fontSize: '0.7rem' }}>
++                                        <AlertTriangle size={10} /> Allergy
++                                    </span>
++                                )}
++                                <button className="view-btn" title="View EMR">
++                                    <ArrowRight size={18} />
++                                </button>
++                            </div>
+                         </div>
+                     ))}
+                 </div>
+             )}
+ 
+-            {/* ΓÇö Add Patient Modal ΓÇö */}
++            {/* ΓöÇΓöÇΓöÇ Register Patient Modal ΓöÇΓöÇΓöÇ */}
+             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Register New Patient">
+                 <form onSubmit={handleAddPatient}>
+                     <div className="form-grid">
+                         <div className="form-group">
+-                            <label>Full Name</label>
+-                            <input
+-                                required
+-                                type="text"
+-                                placeholder="Enter patient name"
+-                                value={newPatient.name}
+-                                onChange={e => setNewPatient({ ...newPatient, name: e.target.value })}
+-                            />
++                            <label>Full Name *</label>
++                            <input required type="text" placeholder="Enter patient name"
++                                value={newPatient.name} onChange={e => setNewPatient({ ...newPatient, name: e.target.value })} />
+                         </div>
+                         <div className="form-group">
+-                            <label>Mobile Number</label>
+-                            <input
+-                                required
+-                                type="tel"
+-                                placeholder="+91 XXXXX XXXXX"
+-                                value={newPatient.mobile}
+-                                onChange={e => setNewPatient({ ...newPatient, mobile: e.target.value })}
+-                            />
++                            <label>Mobile Number *</label>
++                            <input required type="tel" placeholder="+91 XXXXX XXXXX"
++                                value={newPatient.mobile} onChange={e => setNewPatient({ ...newPatient, mobile: e.target.value })} />
+                         </div>
+                         <div className="form-group">
+-                            <label>Age</label>
+-                            <input
+-                                required
+-                                type="number"
+-                                placeholder="Age in years"
+-                                min="0"
+-                                max="120"
+-                                value={newPatient.age}
+-                                onChange={e => setNewPatient({ ...newPatient, age: e.target.value })}
+-                            />
++                            <label>Age *</label>
++                            <input required type="number" placeholder="Age" min="0" max="120"
++                                value={newPatient.age} onChange={e => setNewPatient({ ...newPatient, age: e.target.value })} />
+                         </div>
+                         <div className="form-group">
+                             <label>Gender</label>
+@@ -141,24 +141,26 @@ const Patients = () => {
+                                 <option>Other</option>
+                             </select>
+                         </div>
++                        <div className="form-group">
++                            <label>Blood Group</label>
++                            <select value={newPatient.bloodGroup} onChange={e => setNewPatient({ ...newPatient, bloodGroup: e.target.value })}>
++                                <option value="">Select</option>
++                                <option>A+</option><option>A-</option>
++                                <option>B+</option><option>B-</option>
++                                <option>AB+</option><option>AB-</option>
++                                <option>O+</option><option>O-</option>
++                            </select>
++                        </div>
++                        <div className="form-group">
++                            <label>Known Allergies</label>
++                            <input type="text" placeholder="e.g. Penicillin, Sulfa"
++                                value={newPatient.allergies} onChange={e => setNewPatient({ ...newPatient, allergies: e.target.value })} />
++                        </div>
+                     </div>
+                     <div className="form-group">
+                         <label>Address</label>
+-                        <input
+-                            type="text"
+-                            placeholder="Street, City"
+-                            value={newPatient.address}
+-                            onChange={e => setNewPatient({ ...newPatient, address: e.target.value })}
+-                        />
+-                    </div>
+-                    <div className="form-group">
+-                        <label>Medical History / Allergies</label>
+-                        <textarea
+-                            rows="3"
+-                            placeholder="Known conditions, allergies, or ongoing treatments..."
+-                            value={newPatient.history}
+-                            onChange={e => setNewPatient({ ...newPatient, history: e.target.value })}
+-                        ></textarea>
++                        <input type="text" placeholder="Street, City"
++                            value={newPatient.address} onChange={e => setNewPatient({ ...newPatient, address: e.target.value })} />
+                     </div>
+                     <button type="submit" className="primary-btn mt-4">
+                         <Heart size={16} /> Save Patient Record
+@@ -166,68 +168,173 @@ const Patients = () => {
+                 </form>
+             </Modal>
+ 
+-            {/* ΓÇö Patient Detail Modal ΓÇö */}
++            {/* ΓöÇΓöÇΓöÇ Patient EMR Modal ΓöÇΓöÇΓöÇ */}
+             <Modal
+                 isOpen={!!selectedPatient}
+                 onClose={() => setSelectedPatient(null)}
+-                title="Patient Details"
++                title="Patient Record"
++                size="lg"
+             >
+                 {selectedPatient && (
+                     <div>
+-                        <div className="flex items-center gap-4 mb-6">
++                        {/* Patient Header */}
++                        <div className="flex items-center gap-4 mb-4">
+                             <div className="patient-avatar" style={{ width: 56, height: 56, fontSize: '1.4rem' }}>
+                                 {selectedPatient.name.charAt(0)}
+                             </div>
+-                            <div>
++                            <div style={{ flex: 1 }}>
+                                 <h3 className="font-bold text-lg">{selectedPatient.name}</h3>
+-                                <span className="text-muted text-sm">{selectedPatient.id}</span>
++                                <span className="text-muted text-sm">{selectedPatient.id} ΓÇó {selectedPatient.age}y, {selectedPatient.gender}</span>
+                             </div>
++                            {isAssistant && (
++                                <button className="icon-btn danger" onClick={() => handleDelete(selectedPatient.id, selectedPatient.name)} title="Delete">
++                                    <Trash2 size={16} />
++                                </button>
++                            )}
+                         </div>
+ 
+-                        <div className="grid-cols-2 mb-4">
+-                            <div className="p-3 bg-background rounded-lg">
+-                                <p className="text-xs text-muted font-semibold mb-1">AGE & GENDER</p>
+-                                <p className="font-bold">{selectedPatient.age}y, {selectedPatient.gender}</p>
+-                            </div>
+-                            <div className="p-3 bg-background rounded-lg">
+-                                <p className="text-xs text-muted font-semibold mb-1">MOBILE</p>
+-                                <p className="font-bold">{selectedPatient.mobile}</p>
+-                            </div>
++                        {/* Tab Switcher */}
++                        <div className="emr-tabs mb-4">
++                            <button className={`emr-tab ${emrTab === 'info' ? 'active' : ''}`} onClick={() => setEmrTab('info')}>
++                                <User size={14} /> Demographics
++                            </button>
++                            <button className={`emr-tab ${emrTab === 'visits' ? 'active' : ''}`} onClick={() => setEmrTab('visits')}>
++                                <FileText size={14} /> Visit History ({selectedPatient.visits?.length || 0})
++                            </button>
+                         </div>
+ 
+-                        {selectedPatient.address && (
+-                            <div className="p-3 bg-background rounded-lg mb-4">
+-                                <p className="text-xs text-muted font-semibold mb-1">ADDRESS</p>
+-                                <p className="font-medium flex items-center gap-2">
+-                                    <MapPin size={14} /> {selectedPatient.address}
+-                                </p>
++                        {/* Demographics Tab */}
++                        {emrTab === 'info' && (
++                            <div>
++                                <div className="grid-cols-2 mb-4">
++                                    <div className="p-3 bg-background rounded-lg">
++                                        <p className="text-xs text-muted font-semibold mb-1">MOBILE</p>
++                                        <p className="font-bold flex items-center gap-2"><Phone size={14} /> {selectedPatient.mobile}</p>
++                                    </div>
++                                    <div className="p-3 bg-background rounded-lg">
++                                        <p className="text-xs text-muted font-semibold mb-1">BLOOD GROUP</p>
++                                        <p className="font-bold flex items-center gap-2"><Droplets size={14} /> {selectedPatient.bloodGroup || 'N/A'}</p>
++                                    </div>
++                                </div>
++                                {selectedPatient.address && (
++                                    <div className="p-3 bg-background rounded-lg mb-4">
++                                        <p className="text-xs text-muted font-semibold mb-1">ADDRESS</p>
++                                        <p className="font-medium flex items-center gap-2"><MapPin size={14} /> {selectedPatient.address}</p>
++                                    </div>
++                                )}
++                                <div className="p-3 bg-background rounded-lg mb-4">
++                                    <p className="text-xs text-muted font-semibold mb-1">ALLERGIES</p>
++                                    <p className={`font-medium flex items-center gap-2 ${selectedPatient.allergies && selectedPatient.allergies !== 'None' ? 'text-accent' : ''}`}>
++                                        <AlertTriangle size={14} /> {selectedPatient.allergies || 'None reported'}
++                                    </p>
++                                </div>
++                                <div className="p-3 bg-background rounded-lg mb-4">
++                                    <p className="text-xs text-muted font-semibold mb-1">REGISTERED ON</p>
++                                    <p className="font-bold">{selectedPatient.registeredOn || 'N/A'}</p>
++                                </div>
+                             </div>
+                         )}
+ 
+-                        {selectedPatient.history && (
+-                            <div className="p-3 bg-background rounded-lg mb-4">
+-                                <p className="text-xs text-muted font-semibold mb-1">MEDICAL HISTORY</p>
+-                                <p className="font-medium">{selectedPatient.history}</p>
+-                            </div>
+-                        )}
++                        {/* Visit History Tab (EMR) */}
++                        {emrTab === 'visits' && (
++                            <div className="emr-visit-list">
++                                {(!selectedPatient.visits || selectedPatient.visits.length === 0) ? (
++                                    <EmptyState
++                                        icon={FileText}
++                                        title="No visit history"
++                                        subtitle="This patient hasn't been seen yet"
++                                    />
++                                ) : (
++                                    selectedPatient.visits.map((visit, index) => (
++                                        <div key={index} className="emr-visit-card">
++                                            <div className="emr-visit-header">
++                                                <span className="emr-visit-date">
++                                                    <Calendar size={13} /> {visit.date}
++                                                </span>
++                                                <span className="tag">{visit.doctor}</span>
++                                            </div>
+ 
+-                        <div className="p-3 bg-background rounded-lg mb-6">
+-                            <p className="text-xs text-muted font-semibold mb-1">LAST VISIT</p>
+-                            <p className="font-bold">{selectedPatient.lastVisit || 'N/A'}</p>
+-                        </div>
++                                            {/* Vitals */}
++                                            {visit.vitals && (
++                                                <div className="emr-vitals-grid">
++                                                    {visit.vitals.bp && (
++                                                        <div className="emr-vital">
++                                                            <span className="emr-vital-label">BP</span>
++                                                            <span className="emr-vital-value">{visit.vitals.bp}</span>
++                                                        </div>
++                                                    )}
++                                                    {visit.vitals.temp && (
++                                                        <div className="emr-vital">
++                                                            <span className="emr-vital-label">Temp</span>
++                                                            <span className="emr-vital-value">{visit.vitals.temp}</span>
++                                                        </div>
++                                                    )}
++                                                    {visit.vitals.pulse && (
++                                                        <div className="emr-vital">
++                                                            <span className="emr-vital-label">Pulse</span>
++                                                            <span className="emr-vital-value">{visit.vitals.pulse}</span>
++                                                        </div>
++                                                    )}
++                                                    {visit.vitals.spo2 && (
++                                                        <div className="emr-vital">
++                                                            <span className="emr-vital-label">SpOΓéé</span>
++                                                            <span className="emr-vital-value">{visit.vitals.spo2}</span>
++                                                        </div>
++                                                    )}
++                                                    {visit.vitals.weight && (
++                                                        <div className="emr-vital">
++                                                            <span className="emr-vital-label">Weight</span>
++                                                            <span className="emr-vital-value">{visit.vitals.weight}</span>
++                                                        </div>
++                                                    )}
++                                                </div>
++                                            )}
+ 
+-                        <div className="flex gap-3">
+-                            <button className="secondary-btn flex-1" onClick={() => setSelectedPatient(null)}>
+-                                <Edit3 size={14} /> Edit Record
+-                            </button>
+-                            <button
+-                                className="icon-btn danger"
+-                                onClick={() => handleDelete(selectedPatient.id, selectedPatient.name)}
+-                                title="Delete"
+-                            >
+-                                <Trash2 size={16} />
+-                            </button>
+-                        </div>
++                                            <div className="emr-field">
++                                                <span className="emr-field-label">Symptoms</span>
++                                                <p>{visit.symptoms}</p>
++                                            </div>
++                                            <div className="emr-field">
++                                                <span className="emr-field-label">Diagnosis</span>
++                                                <p className="font-bold">{visit.diagnosis}</p>
++                                            </div>
++
++                                            {visit.medicines?.length > 0 && (
++                                                <div className="emr-field">
++                                                    <span className="emr-field-label"><Pill size={12} /> Medications</span>
++                                                    <div className="emr-meds-list">
++                                                        {visit.medicines.map((med, mi) => (
++                                                            <div key={mi} className="emr-med-item">
++                                                                <strong>{med.name} {med.dosage}</strong>
++                                                                <span>{med.frequency} ΓÇó {med.duration}</span>
++                                                            </div>
++                                                        ))}
++                                                    </div>
++                                                </div>
++                                            )}
++
++                                            {visit.labReferrals?.length > 0 && (
++                                                <div className="emr-field">
++                                                    <span className="emr-field-label"><Activity size={12} /> Lab Referrals</span>
++                                                    <div className="flex gap-2 flex-wrap">
++                                                        {visit.labReferrals.map((lab, li) => (
++                                                            <span key={li} className="tag">{lab}</span>
++                                                        ))}
++                                                    </div>
++                                                </div>
++                                            )}
++
++                                            {visit.notes && (
++                                                <div className="emr-field">
++                                                    <span className="emr-field-label">Doctor's Notes</span>
++                                                    <p className="text-sm text-muted" style={{ fontStyle: 'italic' }}>{visit.notes}</p>
++                                                </div>
++                                            )}
++                                        </div>
++                                    ))
++                                )}
++                            </div>
++                        )}
+                     </div>
+                 )}
+             </Modal>
+diff --git a/src/pages/PharmacyDashboard.jsx b/src/pages/PharmacyDashboard.jsx
+index 7025244..28087a9 100644
+--- a/src/pages/PharmacyDashboard.jsx
++++ b/src/pages/PharmacyDashboard.jsx
+@@ -5,10 +5,10 @@ import useLocalStorage from '../hooks/useLocalStorage';
+ 
+ const PharmacyDashboard = () => {
+     const [prescriptions] = useLocalStorage('incoming_prescriptions', [
+-        { id: 'RX-001', patient: 'Rahul Verma', doctor: 'Dr. Sharma', clinic: 'SmartClinic', status: 'Pending', items: 3, total: 450, time: '10 mins ago', clinicId: 'CLINIC001' },
+-        { id: 'RX-002', patient: 'Sita Rani', doctor: 'Dr. Sharma', clinic: 'SmartClinic', status: 'Dispensed', items: 2, total: 320, time: '25 mins ago', clinicId: 'CLINIC001' },
++        { id: 'RX-001', patient: 'Rahul Verma', doctor: 'Dr. Payal Patel', clinic: 'SmartClinic', status: 'Pending', items: 3, total: 450, time: '10 mins ago', clinicId: 'CLINIC001' },
++        { id: 'RX-002', patient: 'Sita Rani', doctor: 'Dr. Payal Patel', clinic: 'SmartClinic', status: 'Dispensed', items: 2, total: 320, time: '25 mins ago', clinicId: 'CLINIC001' },
+         { id: 'RX-003', patient: 'Amit Singh', doctor: 'Dr. Patel', clinic: 'City Care Clinic', status: 'Pending', items: 4, total: 780, time: '1 hour ago', clinicId: 'CLINIC002' },
+-        { id: 'RX-004', patient: 'Priya Desai', doctor: 'Dr. Sharma', clinic: 'SmartClinic', status: 'Dispensed', items: 1, total: 150, time: '2 hours ago', clinicId: 'CLINIC001' },
++        { id: 'RX-004', patient: 'Priya Desai', doctor: 'Dr. Payal Patel', clinic: 'SmartClinic', status: 'Dispensed', items: 1, total: 150, time: '2 hours ago', clinicId: 'CLINIC001' },
+     ]);
+ 
+     const [inventory] = useLocalStorage('store_inventory', []);
+diff --git a/src/pages/Prescriptions.jsx b/src/pages/Prescriptions.jsx
+index 291c15b..42db47e 100644
+--- a/src/pages/Prescriptions.jsx
++++ b/src/pages/Prescriptions.jsx
+@@ -10,7 +10,7 @@ import useLocalStorage from '../hooks/useLocalStorage';
+ 
+ const DEMO_PRESCRIPTIONS = [
+     {
+-        id: 'RX-001', patient: 'Rahul Verma', patientMobile: '9876543210', doctor: 'Dr. Sharma', clinic: 'SmartClinic', clinicId: 'CLINIC001',
++        id: 'RX-001', patient: 'Rahul Verma', patientMobile: '9876543210', doctor: 'Dr. Payal Patel', clinic: 'SmartClinic', clinicId: 'CLINIC001',
+         status: 'Pending', date: '2024-02-18', time: '10:15 AM',
+         medicines: [
+             { name: 'Paracetamol 500mg', dosage: '500mg', frequency: '1-0-1 (Twice a day)', duration: '5 days', qty: 10 },
+@@ -19,7 +19,7 @@ const DEMO_PRESCRIPTIONS = [
+         ]
+     },
+     {
+-        id: 'RX-002', patient: 'Sita Rani', patientMobile: '8765432109', doctor: 'Dr. Sharma', clinic: 'SmartClinic', clinicId: 'CLINIC001',
++        id: 'RX-002', patient: 'Sita Rani', patientMobile: '8765432109', doctor: 'Dr. Payal Patel', clinic: 'SmartClinic', clinicId: 'CLINIC001',
+         status: 'Dispensed', date: '2024-02-18', time: '09:45 AM',
+         medicines: [
+             { name: 'Amoxicillin 250mg', dosage: '250mg', frequency: '1-0-1 (Twice a day)', duration: '7 days', qty: 14 },
+@@ -37,7 +37,7 @@ const DEMO_PRESCRIPTIONS = [
+         ]
+     },
+     {
+-        id: 'RX-004', patient: 'Priya Desai', patientMobile: '6543210987', doctor: 'Dr. Sharma', clinic: 'SmartClinic', clinicId: 'CLINIC001',
++        id: 'RX-004', patient: 'Priya Desai', patientMobile: '6543210987', doctor: 'Dr. Payal Patel', clinic: 'SmartClinic', clinicId: 'CLINIC001',
+         status: 'Dispensed', date: '2024-02-18', time: '09:00 AM',
+         medicines: [
+             { name: 'Betadine Ointment', dosage: 'Apply externally', frequency: '1-0-1 (Twice a day)', duration: '7 days', qty: 1 },
+diff --git a/src/pages/Settings.jsx b/src/pages/Settings.jsx
+index e4ae669..5b3cf9f 100644
+--- a/src/pages/Settings.jsx
++++ b/src/pages/Settings.jsx
+@@ -9,7 +9,7 @@ const Settings = () => {
+ 
+     const [clinicSettings, setClinicSettings] = useState({
+         clinicName: 'SmartClinic',
+-        doctorName: user?.name || 'Dr. Sharma',
++        doctorName: user?.name || 'Dr. Payal Patel',
+         specialty: 'General Medicine',
+         phone: '+91 98765 43210',
+         email: user?.email || 'doctor@clinic.com',
+diff --git a/src/styles/index.css b/src/styles/index.css
+index 1405ba1..ad131af 100644
+--- a/src/styles/index.css
++++ b/src/styles/index.css
+@@ -2536,4 +2536,1058 @@ nav {
+     border-color: var(--primary);
+     background: var(--primary-light);
+     color: var(--primary);
++}
++
++/* ========================================
++   ROLE BADGES ΓÇö Sidebar
++   ======================================== */
++.role-badge {
++    display: flex;
++    align-items: center;
++    gap: 0.5rem;
++    padding: 0.45rem 0.85rem;
++    border-radius: var(--radius);
++    font-size: 0.78rem;
++    font-weight: 700;
++    margin-bottom: 1.5rem;
++    letter-spacing: 0.02em;
++}
++
++.doctor-badge {
++    background: linear-gradient(135deg, #eef2ff, #dbeafe);
++    color: var(--primary);
++    border: 1px solid rgba(79, 70, 229, 0.12);
++}
++
++.assistant-badge {
++    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
++    color: #065f46;
++    border: 1px solid rgba(16, 185, 129, 0.15);
++}
++
++.pharmacist-badge {
++    background: linear-gradient(135deg, #d1fae5, #6ee7b7);
++    color: #047857;
++    border: 1px solid rgba(16, 185, 129, 0.2);
++}
++
++/* ========================================
++   QUICK ACTION CARDS ΓÇö Assistant Dashboard
++   ======================================== */
++.quick-action-card {
++    display: flex;
++    flex-direction: column;
++    align-items: center;
++    justify-content: center;
++    gap: 0.5rem;
++    padding: 1.5rem 1rem;
++    border-radius: var(--radius-xl);
++    text-align: center;
++    cursor: pointer;
++    transition: var(--transition);
++    text-decoration: none;
++    color: inherit;
++}
++
++.quick-action-card:hover {
++    transform: translateY(-3px);
++    box-shadow: var(--shadow-md);
++    border-color: var(--primary);
++}
++
++.quick-action-card h4 {
++    font-size: 0.9rem;
++    font-weight: 700;
++    margin: 0;
++}
++
++.quick-action-icon {
++    width: 52px;
++    height: 52px;
++    border-radius: var(--radius-lg);
++    display: flex;
++    align-items: center;
++    justify-content: center;
++}
++
++/* ========================================
++   CONSULTING HIGHLIGHT BAR
++   ======================================== */
++.consulting-highlight {
++    display: flex;
++    align-items: center;
++    justify-content: space-between;
++    padding: 1rem 1.5rem;
++    border-radius: var(--radius-xl);
++    border-left: 4px solid var(--emerald);
++    background: rgba(209, 250, 229, 0.4);
++}
++
++.queue-item-active {
++    background: rgba(209, 250, 229, 0.2) !important;
++    border-left: 3px solid var(--emerald);
++}
++
++/* ========================================
++   EMR ΓÇö Electronic Medical Records
++   ======================================== */
++.emr-tabs {
++    display: flex;
++    gap: 0;
++    background: var(--background);
++    border-radius: var(--radius);
++    padding: 3px;
++}
++
++.emr-tab {
++    flex: 1;
++    display: flex;
++    align-items: center;
++    justify-content: center;
++    gap: 0.4rem;
++    padding: 0.6rem 1rem;
++    border-radius: var(--radius-sm);
++    font-size: 0.85rem;
++    font-weight: 600;
++    color: var(--text-muted);
++    background: transparent;
++    cursor: pointer;
++    transition: var(--transition);
++    border: none;
++}
++
++.emr-tab.active {
++    background: var(--surface);
++    color: var(--primary);
++    box-shadow: var(--shadow-sm);
++}
++
++.emr-tab:hover:not(.active) {
++    color: var(--text-main);
++}
++
++.emr-visit-list {
++    display: flex;
++    flex-direction: column;
++    gap: 1rem;
++    max-height: 500px;
++    overflow-y: auto;
++    padding-right: 0.25rem;
++}
++
++.emr-visit-card {
++    background: var(--background);
++    border-radius: var(--radius-lg);
++    padding: 1rem 1.25rem;
++    border-left: 3px solid var(--primary);
++}
++
++.emr-visit-header {
++    display: flex;
++    justify-content: space-between;
++    align-items: center;
++    margin-bottom: 0.75rem;
++}
++
++.emr-visit-date {
++    display: flex;
++    align-items: center;
++    gap: 0.4rem;
++    font-size: 0.85rem;
++    font-weight: 700;
++    color: var(--primary);
++}
++
++.emr-vitals-grid {
++    display: flex;
++    flex-wrap: wrap;
++    gap: 0.5rem;
++    margin-bottom: 0.75rem;
++}
++
++.emr-vital {
++    background: var(--surface);
++    padding: 0.35rem 0.65rem;
++    border-radius: var(--radius-sm);
++    border: 1px solid var(--border);
++    display: flex;
++    align-items: center;
++    gap: 0.35rem;
++    font-size: 0.78rem;
++}
++
++.emr-vital-label {
++    font-weight: 700;
++    color: var(--text-muted);
++    text-transform: uppercase;
++    font-size: 0.65rem;
++}
++
++.emr-vital-value {
++    font-weight: 700;
++    color: var(--text-main);
++}
++
++.emr-field {
++    margin-bottom: 0.6rem;
++}
++
++.emr-field-label {
++    font-size: 0.72rem;
++    font-weight: 700;
++    color: var(--text-faint);
++    text-transform: uppercase;
++    letter-spacing: 0.04em;
++    display: flex;
++    align-items: center;
++    gap: 0.3rem;
++    margin-bottom: 0.2rem;
++}
++
++.emr-field p {
++    font-size: 0.85rem;
++    color: var(--text-secondary);
++    line-height: 1.4;
++}
++
++.emr-meds-list {
++    display: flex;
++    flex-direction: column;
++    gap: 0.3rem;
++}
++
++.emr-med-item {
++    display: flex;
++    justify-content: space-between;
++    align-items: center;
++    background: var(--surface);
++    padding: 0.4rem 0.65rem;
++    border-radius: var(--radius-sm);
++    font-size: 0.82rem;
++    border: 1px solid var(--border-light);
++}
++
++.emr-med-item strong {
++    color: var(--text-main);
++}
++
++.emr-med-item span {
++    color: var(--text-muted);
++    font-size: 0.75rem;
++}
++
++/* ========================================
++   VITALS INPUT GRID ΓÇö Consultation
++   ======================================== */
++.vitals-grid {
++    display: grid;
++    grid-template-columns: repeat(5, 1fr);
++    gap: 0.5rem;
++}
++
++.vital-input {
++    display: flex;
++    flex-direction: column;
++    gap: 0.2rem;
++}
++
++.vital-input label {
++    font-size: 0.68rem;
++    font-weight: 700;
++    color: var(--text-muted);
++    text-transform: uppercase;
++    letter-spacing: 0.04em;
++}
++
++.vital-input input {
++    width: 100%;
++    padding: 0.5rem 0.6rem;
++    border: 1.5px solid var(--border);
++    border-radius: var(--radius-sm);
++    font-size: 0.85rem;
++    background: var(--surface);
++    transition: var(--transition);
++    outline: none;
++    font-weight: 600;
++    text-align: center;
++}
++
++.vital-input input:focus {
++    border-color: var(--primary);
++    box-shadow: 0 0 0 2px var(--primary-glow);
++}
++
++.vital-input input::placeholder {
++    color: var(--text-faint);
++    font-weight: 400;
++}
++
++/* ========================================
++   LAB REFERRAL PANEL
++   ======================================== */
++.lab-referral-section {
++    border-top: 1px solid var(--border-light);
++    padding-top: 0.75rem;
++}
++
++.lab-panel {
++    background: var(--background);
++    border-radius: var(--radius-lg);
++    padding: 1rem;
++}
++
++.lab-search {
++    width: 100%;
++    padding: 0.6rem 0.85rem;
++    border: 1.5px solid var(--border);
++    border-radius: var(--radius);
++    font-size: 0.875rem;
++    background: var(--surface);
++    outline: none;
++    margin-bottom: 0.75rem;
++    transition: var(--transition);
++}
++
++.lab-search:focus {
++    border-color: var(--secondary);
++    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.15);
++}
++
++.selected-labs {
++    display: flex;
++    flex-wrap: wrap;
++    gap: 0.35rem;
++}
++
++.lab-options {
++    display: flex;
++    flex-wrap: wrap;
++    gap: 0.35rem;
++    max-height: 140px;
++    overflow-y: auto;
++}
++
++.lab-tag {
++    padding: 0.35rem 0.65rem;
++    border-radius: var(--radius-full);
++    font-size: 0.75rem;
++    font-weight: 600;
++    cursor: pointer;
++    transition: var(--transition);
++    background: var(--surface);
++    color: var(--text-muted);
++    border: 1px solid var(--border);
++}
++
++.lab-tag:hover {
++    border-color: var(--secondary);
++    color: var(--secondary);
++}
++
++.lab-tag.selected {
++    background: var(--secondary-light);
++    color: #0c4a6e;
++    border-color: var(--secondary);
++}
++
++.lab-tag.selected:hover {
++    background: var(--accent-light);
++    color: var(--accent);
++    border-color: var(--accent);
++}
++
++/* ========================================
++   LOGIN INFO
++   ======================================== */
++.login-info {
++    padding-top: 0.5rem;
++}
++
++/* ========================================
++   RESPONSIVE ΓÇö Vitals & EMR
++   ======================================== */
++@media (max-width: 1024px) {
++    .vitals-grid {
++        grid-template-columns: repeat(3, 1fr);
++    }
++}
++
++@media (max-width: 768px) {
++    .vitals-grid {
++        grid-template-columns: repeat(2, 1fr);
++    }
++
++    .grid-cols-3 {
++        grid-template-columns: 1fr;
++    }
++
++    .emr-vitals-grid {
++        gap: 0.35rem;
++    }
++
++    .consulting-highlight {
++        flex-direction: column;
++        gap: 0.75rem;
++        align-items: flex-start;
++    }
++}
++
++/* ========================================
++   DISPENSARY ΓÇö Indoor & Outdoor
++   ======================================== */
++.dispensary-categories {
++    display: flex;
++    gap: 0.5rem;
++    flex-wrap: wrap;
++    padding: 1rem;
++    border-radius: var(--radius-xl);
++}
++
++.dispensary-cat-chip {
++    display: flex;
++    align-items: center;
++    gap: 0.4rem;
++    padding: 0.4rem 0.75rem;
++    border-radius: var(--radius-full);
++    background: rgba(255, 255, 255, 0.9);
++    border: 1.5px solid var(--border);
++    font-size: 0.8rem;
++    font-weight: 600;
++    transition: var(--transition);
++}
++
++.dispensary-cat-chip:hover {
++    border-color: var(--cat-color, var(--primary));
++    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
++    transform: translateY(-1px);
++}
++
++.cat-icon {
++    font-size: 1rem;
++}
++
++.cat-label {
++    color: var(--text-secondary);
++    font-size: 0.78rem;
++}
++
++.dispensary-orders-list {
++    display: flex;
++    flex-direction: column;
++    gap: 1rem;
++}
++
++.dispensary-order-card {
++    border-radius: var(--radius-xl);
++    overflow: hidden;
++    transition: var(--transition);
++}
++
++.dispensary-order-card.order-done {
++    opacity: 0.7;
++}
++
++.dispensary-order-card:hover {
++    box-shadow: var(--shadow-md);
++}
++
++.order-header {
++    display: flex;
++    justify-content: space-between;
++    align-items: center;
++    padding: 1rem 1.25rem;
++    cursor: pointer;
++    gap: 1rem;
++}
++
++.order-header-left {
++    display: flex;
++    align-items: center;
++    gap: 0.75rem;
++}
++
++.order-patient-avatar {
++    width: 42px;
++    height: 42px;
++    background: linear-gradient(135deg, var(--primary-light), #dbeafe);
++    color: var(--primary);
++    border-radius: 12px;
++    display: flex;
++    align-items: center;
++    justify-content: center;
++    flex-shrink: 0;
++}
++
++.order-header-right {
++    display: flex;
++    align-items: center;
++    gap: 0.75rem;
++}
++
++.order-progress {
++    display: flex;
++    align-items: center;
++    gap: 0.5rem;
++}
++
++.progress-bar {
++    width: 80px;
++    height: 6px;
++    background: var(--background);
++    border-radius: 3px;
++    overflow: hidden;
++}
++
++.progress-fill {
++    height: 100%;
++    background: linear-gradient(90deg, var(--emerald), #34d399);
++    border-radius: 3px;
++    transition: width 0.4s ease;
++}
++
++.order-detail {
++    padding: 0 1.25rem 1.25rem;
++    border-top: 1px solid var(--border-light);
++}
++
++.order-notes {
++    display: flex;
++    align-items: flex-start;
++    gap: 0.5rem;
++    padding: 0.75rem;
++    background: var(--amber-light);
++    border-radius: var(--radius);
++    margin: 0.75rem 0;
++    font-size: 0.85rem;
++    color: #92400e;
++}
++
++.dispensary-cat-section {
++    margin-top: 1rem;
++}
++
++.cat-section-title {
++    display: flex;
++    align-items: center;
++    gap: 0.5rem;
++    font-size: 0.85rem;
++    font-weight: 700;
++    margin-bottom: 0.5rem;
++    text-transform: uppercase;
++    letter-spacing: 0.03em;
++}
++
++.cat-items {
++    display: flex;
++    flex-direction: column;
++    gap: 0.35rem;
++}
++
++.dispensary-item {
++    display: flex;
++    align-items: center;
++    gap: 0.75rem;
++    padding: 0.7rem 0.85rem;
++    background: var(--surface);
++    border: 1.5px solid var(--border);
++    border-radius: var(--radius);
++    cursor: pointer;
++    transition: var(--transition);
++}
++
++.dispensary-item:hover {
++    border-color: var(--primary);
++    background: var(--primary-light);
++}
++
++.dispensary-item.item-dispensed {
++    opacity: 0.55;
++    border-color: var(--emerald);
++    background: var(--emerald-light);
++}
++
++.dispensary-item.item-dispensed .item-info strong {
++    text-decoration: line-through;
++}
++
++.item-checkbox {
++    flex-shrink: 0;
++}
++
++.checkbox-empty {
++    width: 20px;
++    height: 20px;
++    border: 2px solid var(--border);
++    border-radius: 6px;
++    transition: var(--transition);
++}
++
++.dispensary-item:hover .checkbox-empty {
++    border-color: var(--primary);
++}
++
++.item-info {
++    flex: 1;
++    min-width: 0;
++}
++
++.item-info strong {
++    display: block;
++    font-size: 0.9rem;
++    margin-bottom: 0.15rem;
++}
++
++.item-info span {
++    font-size: 0.78rem;
++    color: var(--text-muted);
++}
++
++.cat-icon-mini {
++    font-size: 1.1rem;
++    flex-shrink: 0;
++}
++
++/* Outdoor dispensary */
++.outdoor-orders-grid {
++    display: grid;
++    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
++    gap: 1rem;
++}
++
++.outdoor-order-card {
++    border-radius: var(--radius-xl);
++    overflow: hidden;
++    transition: var(--transition);
++}
++
++.outdoor-order-card:hover {
++    transform: translateY(-2px);
++    box-shadow: var(--shadow-md);
++}
++
++.outdoor-order-card.order-done {
++    opacity: 0.75;
++}
++
++.outdoor-card-header {
++    display: flex;
++    justify-content: space-between;
++    align-items: center;
++    padding: 1rem;
++    border-bottom: 1px solid var(--border-light);
++}
++
++.outdoor-meds-list {
++    padding: 0.5rem 1rem;
++}
++
++.outdoor-med-row {
++    display: flex;
++    justify-content: space-between;
++    align-items: center;
++    padding: 0.5rem 0;
++    border-bottom: 1px solid var(--border-light);
++}
++
++.outdoor-med-row:last-child {
++    border-bottom: none;
++}
++
++.outdoor-card-actions {
++    display: flex;
++    gap: 0.5rem;
++    padding: 0.75rem 1rem;
++    border-top: 1px solid var(--border-light);
++}
++
++/* ========================================
++   DIET TEMPLATES & HOMECARE
++   ======================================== */
++.diet-template-grid {
++    display: grid;
++    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
++    gap: 1.25rem;
++}
++
++.diet-template-card {
++    padding: 1.25rem;
++    border-radius: var(--radius-xl);
++    cursor: pointer;
++    transition: var(--transition);
++    border-left: 4px solid var(--template-color, var(--primary));
++}
++
++.diet-template-card:hover {
++    transform: translateY(-3px);
++    box-shadow: var(--shadow-md);
++    border-color: var(--template-color, var(--primary));
++}
++
++.diet-card-header {
++    display: flex;
++    align-items: center;
++    gap: 1rem;
++    margin-bottom: 1rem;
++}
++
++.diet-icon {
++    font-size: 2rem;
++    flex-shrink: 0;
++}
++
++.diet-card-preview {
++    display: grid;
++    grid-template-columns: 1fr 1fr;
++    gap: 0.75rem;
++    margin-bottom: 0.5rem;
++}
++
++.diet-preview-section {
++    display: flex;
++    flex-direction: column;
++    gap: 0.2rem;
++}
++
++.diet-detail-list {
++    display: flex;
++    flex-direction: column;
++    gap: 0.5rem;
++}
++
++.diet-detail-item {
++    display: flex;
++    align-items: center;
++    gap: 0.75rem;
++    padding: 0.7rem;
++    background: var(--background);
++    border-radius: var(--radius);
++    transition: var(--transition);
++}
++
++.diet-detail-item:hover {
++    background: var(--primary-light);
++}
++
++.priority-dot {
++    width: 10px;
++    height: 10px;
++    border-radius: 50%;
++    flex-shrink: 0;
++}
++
++.priority-dot.priority-essential {
++    background: var(--emerald);
++}
++
++.priority-dot.priority-recommended {
++    background: var(--secondary);
++}
++
++.priority-dot.priority-optional {
++    background: var(--text-faint);
++}
++
++.tag-essential {
++    background: var(--emerald-light) !important;
++    color: #065f46 !important;
++}
++
++.tag-recommended {
++    background: var(--secondary-light) !important;
++    color: #0c4a6e !important;
++}
++
++.tag-optional {
++    background: var(--background) !important;
++    color: var(--text-muted) !important;
++}
++
++.diet-avoid-item {
++    display: flex;
++    align-items: flex-start;
++    gap: 0.75rem;
++    padding: 0.7rem;
++    background: var(--accent-light);
++    border-radius: var(--radius);
++}
++
++.homecare-tip-item {
++    display: flex;
++    align-items: center;
++    gap: 0.75rem;
++    padding: 0.7rem;
++    background: var(--background);
++    border-radius: var(--radius);
++    transition: var(--transition);
++}
++
++.homecare-tip-item:hover {
++    background: var(--emerald-light);
++}
++
++.tip-icon {
++    font-size: 1.3rem;
++    flex-shrink: 0;
++    width: 32px;
++    height: 32px;
++    display: flex;
++    align-items: center;
++    justify-content: center;
++    background: var(--surface);
++    border-radius: var(--radius-sm);
++}
++
++/* ========================================
++   DOCUMENT SCANNER
++   ======================================== */
++.doc-grid {
++    display: grid;
++    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
++    gap: 1rem;
++}
++
++.doc-card {
++    border-radius: var(--radius-xl);
++    overflow: hidden;
++    cursor: pointer;
++    transition: var(--transition);
++}
++
++.doc-card:hover {
++    transform: translateY(-3px);
++    box-shadow: var(--shadow-md);
++}
++
++.doc-card-thumb {
++    height: 120px;
++    display: flex;
++    align-items: center;
++    justify-content: center;
++    position: relative;
++    overflow: hidden;
++}
++
++.doc-card-thumb img {
++    width: 100%;
++    height: 100%;
++    object-fit: cover;
++}
++
++.doc-type-icon {
++    font-size: 2.5rem;
++}
++
++.doc-type-badge {
++    position: absolute;
++    top: 8px;
++    right: 8px;
++    padding: 0.2rem 0.5rem;
++    border-radius: var(--radius-full);
++    color: white;
++    font-size: 0.65rem;
++    font-weight: 700;
++    text-transform: uppercase;
++    letter-spacing: 0.03em;
++}
++
++.doc-card-body {
++    padding: 0.85rem;
++}
++
++.doc-type-avatar {
++    width: 56px;
++    height: 56px;
++    border-radius: 16px;
++    display: flex;
++    align-items: center;
++    justify-content: center;
++    flex-shrink: 0;
++}
++
++.scanner-capture-btn {
++    flex: 1;
++    display: flex;
++    flex-direction: column;
++    align-items: center;
++    justify-content: center;
++    gap: 0.5rem;
++    padding: 1.5rem;
++    background: var(--background);
++    border: 2px dashed var(--border);
++    border-radius: var(--radius-xl);
++    color: var(--text-muted);
++    font-weight: 600;
++    font-size: 0.85rem;
++    transition: var(--transition);
++    cursor: pointer;
++}
++
++.scanner-capture-btn:hover {
++    border-color: var(--primary);
++    color: var(--primary);
++    background: var(--primary-light);
++}
++
++.scanner-preview {
++    position: relative;
++    border-radius: var(--radius-xl);
++    overflow: hidden;
++    border: 2px solid var(--border);
++    max-height: 250px;
++}
++
++.scanner-preview img {
++    width: 100%;
++    height: 100%;
++    object-fit: contain;
++    background: var(--background);
++}
++
++.preview-remove {
++    position: absolute;
++    top: 8px;
++    right: 8px;
++    width: 28px;
++    height: 28px;
++    background: var(--accent);
++    color: white;
++    border-radius: 50%;
++    display: flex;
++    align-items: center;
++    justify-content: center;
++    cursor: pointer;
++    border: none;
++}
++
++/* ========================================
++   PATIENT OVERVIEW (Enhanced)
++   ======================================== */
++.patient-overview-grid {
++    display: grid;
++    grid-template-columns: 1fr 1fr;
++    gap: 1rem;
++    margin-bottom: 1.5rem;
++}
++
++.overview-card {
++    padding: 1rem;
++    background: var(--background);
++    border-radius: var(--radius);
++    border-left: 3px solid var(--primary);
++}
++
++.overview-card h5 {
++    font-size: 0.7rem;
++    text-transform: uppercase;
++    letter-spacing: 0.05em;
++    color: var(--text-muted);
++    font-weight: 700;
++    margin-bottom: 0.5rem;
++}
++
++.overview-card p {
++    font-size: 0.9rem;
++    font-weight: 600;
++}
++
++.last-instructions-card {
++    padding: 1rem;
++    background: linear-gradient(135deg, #eef2ff, #e0f2fe);
++    border-radius: var(--radius);
++    border-left: 3px solid var(--secondary);
++    margin-bottom: 1rem;
++}
++
++.last-instructions-card h5 {
++    font-size: 0.7rem;
++    text-transform: uppercase;
++    letter-spacing: 0.05em;
++    color: var(--secondary);
++    font-weight: 700;
++    margin-bottom: 0.4rem;
++}
++
++.visit-timeline {
++    position: relative;
++    padding-left: 1.5rem;
++}
++
++.visit-timeline::before {
++    content: '';
++    position: absolute;
++    left: 6px;
++    top: 0;
++    bottom: 0;
++    width: 2px;
++    background: var(--border);
++}
++
++.timeline-item {
++    position: relative;
++    padding: 0.75rem 0;
++    margin-bottom: 0.5rem;
++}
++
++.timeline-item::before {
++    content: '';
++    position: absolute;
++    left: -1.5rem;
++    top: 1rem;
++    width: 10px;
++    height: 10px;
++    border-radius: 50%;
++    background: var(--primary);
++    border: 2px solid var(--surface);
++    z-index: 1;
++}
++
++.timeline-item:first-child::before {
++    background: var(--emerald);
++    width: 12px;
++    height: 12px;
++}
++
++/* ========================================
++   RESPONSIVE ΓÇö New Features
++   ======================================== */
++@media (max-width: 768px) {
++    .dispensary-categories {
++        overflow-x: auto;
++        flex-wrap: nowrap;
++        padding: 0.75rem;
++    }
++
++    .outdoor-orders-grid {
++        grid-template-columns: 1fr;
++    }
++
++    .diet-template-grid {
++        grid-template-columns: 1fr;
++    }
++
++    .doc-grid {
++        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
++    }
++
++    .diet-card-preview {
++        grid-template-columns: 1fr;
++    }
++
++    .patient-overview-grid {
++        grid-template-columns: 1fr;
++    }
++
++    .scanner-capture-btn {
++        padding: 1rem;
++    }
++
++    .order-header {
++        flex-direction: column;
++        align-items: flex-start;
++    }
++
++    .order-header-right {
++        width: 100%;
++        justify-content: space-between;
++    }
+ }
+\ No newline at end of file
+diff --git a/src/utils/pdfUtils.js b/src/utils/pdfUtils.js
+index 1ac7b3e..3ba2f19 100644
+--- a/src/utils/pdfUtils.js
++++ b/src/utils/pdfUtils.js
+@@ -1,7 +1,7 @@
+ import jsPDF from 'jspdf';
+ import 'jspdf-autotable';
+ 
+-export const generatePrescriptionPDF = ({ clinic, patient, symptoms, diagnosis, medicines, date }) => {
++export const generatePrescriptionPDF = ({ clinic, patient, symptoms, diagnosis, medicines, vitals, labReferrals, date }) => {
+     const doc = new jsPDF();
+ 
+     // Header
+@@ -16,7 +16,7 @@ export const generatePrescriptionPDF = ({ clinic, patient, symptoms, diagnosis,
+     doc.text(clinic?.address || '', 14, 26);
+     doc.text(`Phone: ${clinic?.phone || ''}`, 14, 31);
+     doc.text(`Date: ${date || new Date().toLocaleDateString('en-IN')}`, 196, 18, { align: 'right' });
+-    doc.text(`Doctor: ${clinic?.doctor || 'Dr. Sharma'}`, 196, 26, { align: 'right' });
++    doc.text(`Doctor: ${clinic?.doctor || 'Dr. Payal Patel'}`, 196, 26, { align: 'right' });
+ 
+     // Patient Info Box
+     doc.setTextColor(30, 41, 59);
+@@ -28,8 +28,27 @@ export const generatePrescriptionPDF = ({ clinic, patient, symptoms, diagnosis,
+     doc.setFont('helvetica', 'normal');
+     doc.text(`ID: ${patient?.id || ''}  |  Age: ${patient?.age || ''}  |  Gender: ${patient?.gender || ''}`, 20, 58);
+ 
++    // Vitals Section
++    let y = 72;
++    if (vitals && (vitals.bp || vitals.temp || vitals.pulse || vitals.spo2 || vitals.weight)) {
++        doc.setFontSize(10);
++        doc.setFont('helvetica', 'bold');
++        doc.setTextColor(79, 70, 229);
++        doc.text('Vitals:', 14, y);
++        doc.setFont('helvetica', 'normal');
++        doc.setTextColor(30, 41, 59);
++        y += 7;
++        const vitalParts = [];
++        if (vitals.bp) vitalParts.push(`BP: ${vitals.bp}`);
++        if (vitals.temp) vitalParts.push(`Temp: ${vitals.temp}`);
++        if (vitals.pulse) vitalParts.push(`Pulse: ${vitals.pulse}`);
++        if (vitals.spo2) vitalParts.push(`SpOΓéé: ${vitals.spo2}`);
++        if (vitals.weight) vitalParts.push(`Weight: ${vitals.weight}`);
++        doc.text(vitalParts.join('  |  '), 14, y);
++        y += 10;
++    }
++
+     // Rx Symbol
+-    let y = 75;
+     doc.setFontSize(24);
+     doc.setFont('helvetica', 'bold');
+     doc.setTextColor(79, 70, 229);
+@@ -69,20 +88,27 @@ export const generatePrescriptionPDF = ({ clinic, patient, symptoms, diagnosis,
+                 med.frequency || '-',
+                 med.duration || '-'
+             ]),
+-            styles: {
+-                fontSize: 10,
+-                cellPadding: 4,
+-            },
+-            headStyles: {
+-                fillColor: [79, 70, 229],
+-                textColor: [255, 255, 255],
+-                fontStyle: 'bold'
+-            },
+-            alternateRowStyles: {
+-                fillColor: [248, 250, 252]
+-            },
++            styles: { fontSize: 10, cellPadding: 4 },
++            headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold' },
++            alternateRowStyles: { fillColor: [248, 250, 252] },
+             margin: { left: 14, right: 14 }
+         });
++        y = doc.lastAutoTable.finalY + 10;
++    }
++
++    // Lab Referrals
++    if (labReferrals && labReferrals.length > 0) {
++        doc.setFontSize(11);
++        doc.setFont('helvetica', 'bold');
++        doc.setTextColor(79, 70, 229);
++        doc.text('Lab / Radiology Referrals:', 14, y);
++        doc.setFont('helvetica', 'normal');
++        doc.setTextColor(30, 41, 59);
++        y += 7;
++        labReferrals.forEach((lab, i) => {
++            doc.text(`${i + 1}. ${lab}`, 20, y);
++            y += 6;
++        });
+     }
+ 
+     // Footer
+@@ -92,7 +118,7 @@ export const generatePrescriptionPDF = ({ clinic, patient, symptoms, diagnosis,
+     doc.setFontSize(9);
+     doc.setTextColor(100, 116, 139);
+     doc.text('This is a computer-generated prescription. No signature required.', 105, pageHeight - 22, { align: 'center' });
+-    doc.text('Powered by SmartClinic SaaS Platform', 105, pageHeight - 16, { align: 'center' });
++    doc.text(`Powered by SmartClinic ΓÇó ${clinic?.name || ''} ΓÇó ${clinic?.phone || ''}`, 105, pageHeight - 16, { align: 'center' });
+ 
+     return doc;
+ };
+@@ -102,10 +128,77 @@ export const downloadPrescription = (data) => {
+     doc.save(`Prescription_${data.patient?.name?.replace(/\s/g, '_') || 'patient'}_${Date.now()}.pdf`);
+ };
+ 
+-export const generateInvoicePDF = ({ clinic, patient, items, invoiceId, date }) => {
++// ΓöÇΓöÇΓöÇ Referral Slip PDF ΓöÇΓöÇΓöÇ
++export const generateReferralSlip = ({ clinic, patient, diagnosis, tests, date }) => {
+     const doc = new jsPDF();
+ 
+     // Header
++    doc.setFillColor(14, 165, 233); // secondary blue
++    doc.rect(0, 0, 210, 35, 'F');
++    doc.setTextColor(255, 255, 255);
++    doc.setFontSize(18);
++    doc.setFont('helvetica', 'bold');
++    doc.text('LAB / RADIOLOGY REFERRAL', 14, 18);
++    doc.setFontSize(10);
++    doc.text(clinic?.name || 'SmartClinic', 14, 28);
++    doc.text(`Date: ${date || new Date().toLocaleDateString('en-IN')}`, 196, 18, { align: 'right' });
++    doc.text(`Referring Doctor: ${clinic?.doctor || ''}`, 196, 28, { align: 'right' });
++
++    // Patient Info
++    doc.setTextColor(30, 41, 59);
++    doc.setFillColor(248, 250, 252);
++    doc.rect(14, 42, 182, 22, 'F');
++    doc.setFontSize(11);
++    doc.setFont('helvetica', 'bold');
++    doc.text(`Patient: ${patient?.name || ''}`, 20, 50);
++    doc.setFont('helvetica', 'normal');
++    doc.text(`ID: ${patient?.id || ''}  |  Age: ${patient?.age || ''}  |  Gender: ${patient?.gender || ''}`, 20, 58);
++
++    // Diagnosis
++    let y = 75;
++    doc.setFontSize(11);
++    doc.setFont('helvetica', 'bold');
++    doc.setTextColor(100, 116, 139);
++    doc.text('Clinical Diagnosis:', 14, y);
++    doc.setFont('helvetica', 'normal');
++    doc.setTextColor(30, 41, 59);
++    y += 7;
++    doc.text(diagnosis || 'As discussed', 14, y);
++
++    // Tests Table
++    y += 15;
++    if (tests && tests.length > 0) {
++        doc.autoTable({
++            startY: y,
++            head: [['#', 'Test / Investigation']],
++            body: tests.map((t, i) => [i + 1, t]),
++            styles: { fontSize: 10, cellPadding: 5 },
++            headStyles: { fillColor: [14, 165, 233] },
++            alternateRowStyles: { fillColor: [240, 249, 255] },
++            margin: { left: 14, right: 14 },
++        });
++    }
++
++    // Footer
++    const pageHeight = doc.internal.pageSize.height;
++    doc.setDrawColor(226, 232, 240);
++    doc.line(14, pageHeight - 35, 196, pageHeight - 35);
++    doc.setFontSize(9);
++    doc.setTextColor(100, 116, 139);
++    doc.text('Please carry this slip when visiting the lab/radiology center.', 105, pageHeight - 27, { align: 'center' });
++    doc.text(`${clinic?.name || 'SmartClinic'} ΓÇó ${clinic?.address || ''} ΓÇó ${clinic?.phone || ''}`, 105, pageHeight - 20, { align: 'center' });
++
++    return doc;
++};
++
++export const downloadReferralSlip = (data) => {
++    const doc = generateReferralSlip(data);
++    doc.save(`Referral_${data.patient?.name?.replace(/\s/g, '_') || 'patient'}_${Date.now()}.pdf`);
++};
++
++export const generateInvoicePDF = ({ clinic, patient, items, invoiceId, date }) => {
++    const doc = new jsPDF();
++
+     doc.setFillColor(79, 70, 229);
+     doc.rect(0, 0, 210, 35, 'F');
+     doc.setTextColor(255, 255, 255);
+@@ -117,7 +210,6 @@ export const generateInvoicePDF = ({ clinic, patient, items, invoiceId, date })
+     doc.text(`#${invoiceId || 'INV-0000'}`, 196, 18, { align: 'right' });
+     doc.text(`Date: ${date || new Date().toLocaleDateString('en-IN')}`, 196, 28, { align: 'right' });
+ 
+-    // Bill To
+     doc.setTextColor(30, 41, 59);
+     doc.setFontSize(11);
+     doc.setFont('helvetica', 'bold');
+@@ -126,10 +218,8 @@ export const generateInvoicePDF = ({ clinic, patient, items, invoiceId, date })
+     doc.text(`${patient?.name || 'Patient'}`, 14, 55);
+     doc.text(`Phone: ${patient?.mobile || ''}`, 14, 62);
+ 
+-    // Items Table
+     if (items && items.length > 0) {
+         const total = items.reduce((sum, item) => sum + (item.amount || 0), 0);
+-
+         doc.autoTable({
+             startY: 72,
+             head: [['#', 'Description', 'Amount (Γé╣)']],
