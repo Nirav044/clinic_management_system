@@ -1,28 +1,50 @@
 const express = require('express');
 const router = express.Router();
-const Appointment = require('../models/Appointment');
+const supabase = require('../lib/supabase');
 const verifyToken = require('../middleware/auth');
 
 // GET appointments for a clinic
 router.get('/', verifyToken, async (req, res) => {
     try {
-        const { date, startDate, endDate } = req.query;
-        const filter = { clinicId: req.user.clinicId };
+        const { date, startDate, endDate, includeCancelled } = req.query;
+        let query = supabase
+            .from('appointments')
+            .select('*')
+            .eq('clinic_id', req.user.clinicId);
         
         if (date) {
-            filter.date = date;
+            query = query.eq('date', date);
         } else if (startDate && endDate) {
-            filter.date = { $gte: startDate, $lte: endDate };
+            query = query.gte('date', startDate).lte('date', endDate);
         }
         
-        // Don't show cancelled appointments in the default list unless requested
-        if (!req.query.includeCancelled) {
-            filter.status = { $ne: 'Cancelled' };
+        // Don't show cancelled appointments unless requested
+        if (!includeCancelled) {
+            query = query.neq('status', 'Cancelled');
         }
 
-        const appointments = await Appointment.find(filter).sort({ createdAt: 1 });
-        res.json(appointments);
+        const { data: appointments, error } = await query.order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        // Map to expected format
+        const formattedAppointments = appointments.map(apt => ({
+            token: apt.token,
+            clinicId: apt.clinic_id,
+            patientId: apt.patient_id,
+            name: apt.name,
+            mobile: apt.mobile,
+            status: apt.status,
+            time: apt.time,
+            date: apt.date,
+            type: apt.type,
+            fee: apt.fee,
+            createdAt: apt.created_at
+        }));
+
+        res.json(formattedAppointments);
     } catch (err) {
+        console.error('Error fetching appointments:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -36,35 +58,62 @@ router.post('/', verifyToken, async (req, res) => {
 
     while (attempts < maxAttempts) {
         try {
-            // Get current count to suggest a token (non-atomic but a good start)
-            const count = await Appointment.countDocuments({ clinicId, date: appointmentDate });
-            let tokenNum = count + 1 + attempts; // Offset by attempts to reduce collisions on retry
+            // Get current count to suggest a token
+            const { count, error: countError } = await supabase
+                .from('appointments')
+                .select('*', { count: 'exact', head: true })
+                .eq('clinic_id', clinicId)
+                .eq('date', appointmentDate);
+
+            if (countError) throw countError;
+
+            let tokenNum = (count || 0) + 1 + attempts;
             const token = `T-${String(tokenNum).padStart(3, '0')}`;
             
             const now = new Date();
             const timeStr = req.body.time || now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-            const newAppointment = new Appointment({
-                token,
-                clinicId,
-                patientId: req.body.patientId || null,
-                name: req.body.name,
-                mobile: req.body.mobile || '',
-                status: 'Waiting',
-                time: timeStr,
-                date: appointmentDate,
-                type: req.body.type || 'Walk-in',
-                fee: req.body.fee || 300,
-            });
+            const { data: appointment, error } = await supabase
+                .from('appointments')
+                .insert({
+                    token,
+                    clinic_id: clinicId,
+                    patient_id: req.body.patientId || null,
+                    name: req.body.name,
+                    mobile: req.body.mobile || '',
+                    status: 'Waiting',
+                    time: timeStr,
+                    date: appointmentDate,
+                    type: req.body.type || 'Walk-in',
+                    fee: req.body.fee || 300
+                })
+                .select()
+                .single();
 
-            await newAppointment.save();
-            return res.status(201).json(newAppointment);
-        } catch (err) {
-            if (err.code === 11000) {
-                // Collision! Increment attempts and try again with a different number
-                attempts++;
-                continue;
+            if (error) {
+                // Unique constraint violation - try again with different token
+                if (error.code === '23505') {
+                    attempts++;
+                    continue;
+                }
+                throw error;
             }
+
+            return res.status(201).json({
+                token: appointment.token,
+                clinicId: appointment.clinic_id,
+                patientId: appointment.patient_id,
+                name: appointment.name,
+                mobile: appointment.mobile,
+                status: appointment.status,
+                time: appointment.time,
+                date: appointment.date,
+                type: appointment.type,
+                fee: appointment.fee,
+                createdAt: appointment.created_at
+            });
+        } catch (err) {
+            console.error('Error creating appointment:', err);
             return res.status(500).json({ error: err.message });
         }
     }
@@ -75,28 +124,53 @@ router.post('/', verifyToken, async (req, res) => {
 router.patch('/:token/status', verifyToken, async (req, res) => {
     try {
         const { status, date } = req.body;
-        const filter = { token: req.params.token, clinicId: req.user.clinicId };
-        if (date) filter.date = date;
 
-        // If calling a patient to Consulting, auto-complete previous Consulting ON THE SAME DATE
+        // If calling a patient to Consulting, auto-complete previous Consulting
         if (status === 'Consulting') {
-            const completionFilter = { clinicId: req.user.clinicId, status: 'Consulting' };
-            if (date) completionFilter.date = date;
+            let updateQuery = supabase
+                .from('appointments')
+                .update({ status: 'Completed' })
+                .eq('clinic_id', req.user.clinicId)
+                .eq('status', 'Consulting');
             
-            await Appointment.updateMany(
-                completionFilter,
-                { $set: { status: 'Completed' } }
-            );
+            if (date) {
+                updateQuery = updateQuery.eq('date', date);
+            }
+            
+            await updateQuery;
         }
 
-        const updated = await Appointment.findOneAndUpdate(
-            filter,
-            { $set: { status } },
-            { new: true }
-        );
+        // Update the target appointment
+        let query = supabase
+            .from('appointments')
+            .update({ status })
+            .eq('token', req.params.token)
+            .eq('clinic_id', req.user.clinicId);
+
+        if (date) {
+            query = query.eq('date', date);
+        }
+
+        const { data: updated, error } = await query.select().single();
+
+        if (error) throw error;
         if (!updated) return res.status(404).json({ error: 'Appointment not found' });
-        res.json(updated);
+
+        res.json({
+            token: updated.token,
+            clinicId: updated.clinic_id,
+            patientId: updated.patient_id,
+            name: updated.name,
+            mobile: updated.mobile,
+            status: updated.status,
+            time: updated.time,
+            date: updated.date,
+            type: updated.type,
+            fee: updated.fee,
+            createdAt: updated.created_at
+        });
     } catch (err) {
+        console.error('Error updating appointment status:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -105,17 +179,37 @@ router.patch('/:token/status', verifyToken, async (req, res) => {
 router.patch('/:token/fee', verifyToken, async (req, res) => {
     try {
         const { fee, date } = req.body;
-        const filter = { token: req.params.token, clinicId: req.user.clinicId };
-        if (date) filter.date = date;
+        
+        let query = supabase
+            .from('appointments')
+            .update({ fee: Number(fee) })
+            .eq('token', req.params.token)
+            .eq('clinic_id', req.user.clinicId);
 
-        const updated = await Appointment.findOneAndUpdate(
-            filter,
-            { $set: { fee: Number(fee) } },
-            { new: true }
-        );
+        if (date) {
+            query = query.eq('date', date);
+        }
+
+        const { data: updated, error } = await query.select().single();
+
+        if (error) throw error;
         if (!updated) return res.status(404).json({ error: 'Appointment not found' });
-        res.json(updated);
+
+        res.json({
+            token: updated.token,
+            clinicId: updated.clinic_id,
+            patientId: updated.patient_id,
+            name: updated.name,
+            mobile: updated.mobile,
+            status: updated.status,
+            time: updated.time,
+            date: updated.date,
+            type: updated.type,
+            fee: updated.fee,
+            createdAt: updated.created_at
+        });
     } catch (err) {
+        console.error('Error updating fee:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -123,15 +217,35 @@ router.patch('/:token/fee', verifyToken, async (req, res) => {
 // PATCH cancel appointment
 router.patch('/:token/cancel', verifyToken, async (req, res) => {
     try {
-        const { date } = req.body; // Need date because token is unique per clinic per date
-        const updated = await Appointment.findOneAndUpdate(
-            { token: req.params.token, clinicId: req.user.clinicId, date },
-            { $set: { status: 'Cancelled' } },
-            { new: true }
-        );
+        const { date } = req.body;
+        
+        const { data: updated, error } = await supabase
+            .from('appointments')
+            .update({ status: 'Cancelled' })
+            .eq('token', req.params.token)
+            .eq('clinic_id', req.user.clinicId)
+            .eq('date', date)
+            .select()
+            .single();
+
+        if (error) throw error;
         if (!updated) return res.status(404).json({ error: 'Appointment not found' });
-        res.json(updated);
+
+        res.json({
+            token: updated.token,
+            clinicId: updated.clinic_id,
+            patientId: updated.patient_id,
+            name: updated.name,
+            mobile: updated.mobile,
+            status: updated.status,
+            time: updated.time,
+            date: updated.date,
+            type: updated.type,
+            fee: updated.fee,
+            createdAt: updated.created_at
+        });
     } catch (err) {
+        console.error('Error cancelling appointment:', err);
         res.status(500).json({ error: err.message });
     }
 });

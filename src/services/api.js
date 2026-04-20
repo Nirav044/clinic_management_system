@@ -1,12 +1,14 @@
 /**
  * Centralized Axios API client for SmartClinic.
- * - Reads base URL from VITE_API_URL environment variable
+ * - In development: Uses Vite proxy to forward /api requests to backend
+ * - In production: Calls the API directly via VITE_API_URL env var
  * - Automatically attaches the JWT token from localStorage to every request
  * - Handles 401 responses by clearing the session and redirecting to login
  */
 import axios from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Use relative URL in development (Vite proxy), or env var in production
+const BASE_URL = import.meta.env.VITE_API_URL || '';
 
 const api = axios.create({
     baseURL: BASE_URL,

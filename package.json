@@ -4,14 +4,23 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node start-dev.js",
+    "dev:frontend": "vite",
+    "dev:backend": "node --env-file-if-exists=/vercel/share/.env.project backend/server.js",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node backend/server.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.49.0",
     "axios": "^1.15.1",
+    "bcryptjs": "^3.0.3",
+    "concurrently": "^9.1.2",
+    "cors": "^2.8.6",
     "date-fns": "^3.3.1",
-    "firebase": "^10.8.0",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.344.0",

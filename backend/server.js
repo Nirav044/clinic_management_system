@@ -1,7 +1,9 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
+
+// Test Supabase connection
+const supabase = require('./lib/supabase');
 
 const app = express();
 
@@ -10,8 +12,15 @@ app.use(cors());
 app.use(express.json());
 
 // Health Check
-app.get('/', (req, res) => {
-    res.json({ message: 'SmartClinic Backend Server is running!' });
+app.get('/', async (req, res) => {
+    try {
+        // Test database connection
+        const { data, error } = await supabase.from('clinics').select('count').limit(1);
+        if (error) throw error;
+        res.json({ message: 'SmartClinic Backend Server is running!', database: 'Connected to Supabase' });
+    } catch (err) {
+        res.json({ message: 'SmartClinic Backend Server is running!', database: 'Not connected', error: err.message });
+    }
 });
 
 // Routes
@@ -23,13 +32,10 @@ app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/dispensary', require('./routes/dispensary'));
 
-// Database Connection
+// Start Server
 const PORT = process.env.PORT || 5000;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/smartclinic';
 
-mongoose.connect(MONGODB_URI)
-    .then(() => {
-        console.log('✅ Connected to MongoDB');
-        app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-    })
-    .catch((error) => console.log('❌ MongoDB connection error:', error));
+app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log('✅ Using Supabase PostgreSQL database');
+});
